@@ -1,2 +1,4 @@
 [service]
-root = "backend" 
+root = "backend"
+build_command = "npm install && npm run build"
+start_command = "npm start" 
