@@ -7,11 +7,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Add startup logging
-console.log('Starting server...');
-console.log('Environment:', {
+console.log('Starting server with environment:', {
   PORT: process.env.PORT,
   NODE_ENV: process.env.NODE_ENV,
-  FRONTEND_URL: process.env.FRONTEND_URL
+  RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT
 });
 
 const app = express();
@@ -61,7 +60,7 @@ io.on("connection", (socket) => {
 
 const PORT = parseInt(process.env.PORT || '5000', 10);
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server listening on http://0.0.0.0:${PORT}`);
   console.log('Server is ready to accept connections');
 });
 
