@@ -6,6 +6,14 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Add startup logging
+console.log('Starting server...');
+console.log('Environment:', {
+  PORT: process.env.PORT,
+  NODE_ENV: process.env.NODE_ENV,
+  FRONTEND_URL: process.env.FRONTEND_URL
+});
+
 const app = express();
 app.use(cors());  // Add cors middleware
 
@@ -52,4 +60,16 @@ io.on("connection", (socket) => {
 });
 
 const PORT = parseInt(process.env.PORT || '5000', 10);
-server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log('Server is ready to accept connections');
+});
+
+// Add error handling
+server.on('error', (error) => {
+  console.error('Server error:', error);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
