@@ -6,6 +6,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const HOST = '0.0.0.0';
+const PORT = parseInt(process.env.PORT || '3000');
+const DEV = process.env.NODE_ENV === 'development';
+
 // Add startup logging
 console.log('Starting server with environment:', {
   PORT: process.env.PORT,
@@ -23,9 +27,16 @@ app.get('/', (req, res) => {
   });
 });
 
-const server = createServer(app);
-const io = new Server(server, {
-  cors: { origin: process.env.FRONTEND_URL || "*" },
+// Create HTTP server first
+const httpServer = createServer(app);
+
+// Initialize Socket.IO with the HTTP server
+const io = new Server(httpServer, {
+  cors: {
+    origin: DEV ? '*' : process.env.FRONTEND_URL,
+    methods: ["GET", "POST"],
+    credentials: true
+  },
 });
 
 const rooms: Record<string, string[]> = {}; // Stores players per room
@@ -58,14 +69,14 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = parseInt(process.env.PORT || '3000', 10);
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server listening on http://0.0.0.0:${PORT}`);
+// Listen with the httpServer, not the Express app
+httpServer.listen(PORT, HOST, () => {
+  console.log(`Server running on ${HOST}:${PORT}`);
   console.log('Server is ready to accept connections');
 });
 
 // Add error handling
-server.on('error', (error) => {
+httpServer.on('error', (error) => {
   console.error('Server error:', error);
 });
 
