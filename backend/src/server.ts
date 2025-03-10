@@ -7,6 +7,15 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
+app.use(cors());  // Add cors middleware
+
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'Server is running',
+    rooms: Object.keys(rooms).length
+  });
+});
+
 const server = createServer(app);
 const io = new Server(server, {
   cors: { origin: process.env.FRONTEND_URL || "*" },
