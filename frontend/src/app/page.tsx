@@ -1,115 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useGameStore } from "../../store/game";
-import socket from "../../utils/socket";
+import { useState } from "react";
+import { useSocket } from "../hooks/useSocket";
+import { useGame } from "../hooks/useGame";
 
 export default function Home() {
-  const { board, setBoard } = useGameStore();
+  const { isConnected } = useSocket();
+  const {
+    playerSymbol,
+    isMyTurn,
+    gameStarted,
+    gameStatus,
+    board,
+    makeMove,
+    joinRoom
+  } = useGame();
+  
   const [roomId, setRoomId] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
-  const [gameStatus, setGameStatus] = useState("Enter a room ID to start");
-  const [playerSymbol, setPlayerSymbol] = useState<"X" | "O" | null>(null);
-  const [isMyTurn, setIsMyTurn] = useState(false);
-  const [playersInRoom, setPlayersInRoom] = useState(0);
-  const [gameStarted, setGameStarted] = useState(false);
 
-  useEffect(() => {
-    socket.on('connect', () => {
-      setIsConnected(true);
-      console.log('Connected to server');
-    });
-
-    socket.on('disconnect', () => {
-      setIsConnected(false);
-      console.log('Disconnected from server');
-      setGameStatus("Disconnected from server");
-    });
-
-    socket.on("updateBoard", (newBoard) => {
-      console.log('Board updated:', newBoard);
-      setBoard(newBoard);
-      setIsMyTurn(true);
-      setGameStatus("Your turn!");
-    });
-
-    socket.on("playerSymbol", (symbol: "X" | "O") => {
-      setPlayerSymbol(symbol);
-      setIsMyTurn(symbol === "X");
-      setGameStatus(`You are player ${symbol}. ${symbol === "X" ? "It's your turn!" : "Waiting for X to move..."}`);
-    });
-
-    socket.on("playerJoined", (playerCount: number) => {
-      setPlayersInRoom(playerCount);
-      setGameStatus(`Players in room: ${playerCount}/2 ${playerCount === 1 ? "- Waiting for opponent..." : ""}`);
-    });
-
-    socket.on("gameStart", () => {
-      setGameStarted(true);
-      if (playerSymbol === "X") {
-        setGameStatus("Game started! Your turn (X)");
-      } else {
-        setGameStatus("Game started! Waiting for X's move");
-      }
-    });
-
-    socket.on("roomFull", () => {
-      setGameStatus("Room is full! Try another room ID");
-    });
-
-    socket.on("error", (message: string) => {
-      setGameStatus(`Error: ${message}`);
-    });
-
-    socket.on("playerLeft", (message: string) => {
-      setGameStatus(message);
-      setGameStarted(false);
-      setPlayersInRoom(prev => prev - 1);
-    });
-
-    socket.on("gameEnd", () => {
-      setGameStarted(false);
-      setBoard(Array(9).fill(null));
-    });
-
-    return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('updateBoard');
-      socket.off('playerSymbol');
-      socket.off('playerJoined');
-      socket.off('gameStart');
-      socket.off('roomFull');
-      socket.off('error');
-      socket.off('playerLeft');
-      socket.off('gameEnd');
-    };
-  }, [setBoard, playerSymbol]);
-
-  const handleClick = (index: number) => {
-    if (!gameStarted) {
-      setGameStatus("Waiting for another player to join...");
-      return;
-    }
-
-    if (!board[index] && isMyTurn && playerSymbol) {
-      const newBoard = [...board];
-      newBoard[index] = playerSymbol;
-      setBoard(newBoard);
-      setIsMyTurn(false);
-      setGameStatus("Waiting for opponent's move...");
-      socket.emit("makeMove", { roomId, board: newBoard });
-    }
-  };
-
-  const handleJoinRoom = () => {
-    if (!roomId.trim()) {
-      setGameStatus("Please enter a room ID");
-      return;
-    }
-    setGameStatus(`Joining room: ${roomId}...`);
-    socket.emit("joinRoom", roomId);
-  };
+  function handleJoinRoom() {
+    joinRoom(roomId);
+  }
 
   return (
     <div className="flex flex-col items-center p-5 text-white">
@@ -155,7 +66,7 @@ export default function Home() {
             className={`w-20 h-20 flex items-center justify-center text-2xl border-2 border-gray-600 
               ${!cell && isMyTurn && gameStarted ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-800'} 
               ${cell === 'X' ? 'text-blue-400' : cell === 'O' ? 'text-red-400' : 'text-white'}`}
-            onClick={() => handleClick(i)}
+            onClick={() => makeMove(i, roomId)}
             disabled={!isMyTurn || !!cell || !gameStarted}
           >
             {cell || '-'}

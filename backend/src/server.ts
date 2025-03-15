@@ -3,6 +3,16 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
+import { GameState } from './game/types';
+import {
+  createInitialState,
+  addPlayerToRoom,
+  removePlayerFromRoom,
+  updateBoard,
+  isPlayerInAnyRoom,
+  getPlayerRoom,
+  getPlayerSymbol
+} from './game/state';
 
 dotenv.config();
 
@@ -18,19 +28,20 @@ console.log('Starting server with environment:', {
 });
 
 const app = express();
-app.use(cors());  // Add cors middleware
+app.use(cors());
+
+// Initialize game state
+let gameState: GameState = createInitialState();
 
 app.get('/', (req, res) => {
   res.json({ 
     status: 'Server is running',
-    rooms: Object.keys(rooms).length
+    rooms: gameState.rooms.size
   });
 });
 
-// Create HTTP server first
 const httpServer = createServer(app);
 
-// Initialize Socket.IO with the HTTP server
 const io = new Server(httpServer, {
   cors: {
     origin: DEV ? '*' : process.env.FRONTEND_URL,
@@ -39,87 +50,74 @@ const io = new Server(httpServer, {
   },
 });
 
-const rooms: Record<string, string[]> = {}; // Stores players per room
-const playerSymbols: Record<string, "X" | "O"> = {}; // Stores player symbols
+function emitGameState(roomId: string) {
+  const room = gameState.rooms.get(roomId);
+  if (room) {
+    io.to(roomId).emit("playerJoined", room.players.length);
+    if (room.players.length === 2) {
+      io.to(roomId).emit("gameStart", true);
+    }
+  }
+}
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   socket.on("joinRoom", (roomId) => {
-    // Check if player is already in a room
-    const currentRoom = Object.keys(rooms).find(room => rooms[room].includes(socket.id));
-    if (currentRoom) {
+    if (isPlayerInAnyRoom(gameState, socket.id)) {
       socket.emit("error", "You are already in a room");
       return;
     }
 
-    // Initialize room if it doesn't exist
-    if (!rooms[roomId]) {
-      rooms[roomId] = [];
-    }
-
-    // Check room capacity
-    if (rooms[roomId].length >= 2) {
+    const room = gameState.rooms.get(roomId);
+    if (room?.players.length >= 2) {
       socket.emit("roomFull");
       return;
     }
 
-    // Join room and assign symbol
-    rooms[roomId].push(socket.id);
+    gameState = addPlayerToRoom(gameState, roomId, socket.id);
     socket.join(roomId);
-    
-    const symbol = rooms[roomId].length === 1 ? "X" : "O";
-    playerSymbols[socket.id] = symbol;
-    socket.emit("playerSymbol", symbol);
-    
-    console.log(`User ${socket.id} joined room ${roomId} as ${symbol}`);
-    io.to(roomId).emit("playerJoined", rooms[roomId].length);
 
-    // If room is now full, notify players
-    if (rooms[roomId].length === 2) {
-      io.to(roomId).emit("gameStart", true);
+    const symbol = getPlayerSymbol(gameState, socket.id);
+    if (symbol) {
+      socket.emit("playerSymbol", symbol);
+      console.log(`User ${socket.id} joined room ${roomId} as ${symbol}`);
     }
+
+    emitGameState(roomId);
   });
 
   socket.on("makeMove", ({ roomId, board }) => {
-    // Verify player is in the room
-    if (!rooms[roomId]?.includes(socket.id)) {
+    const room = getPlayerRoom(gameState, socket.id);
+    if (!room || room.id !== roomId) {
       socket.emit("error", "You are not in this room");
       return;
     }
+
+    gameState = updateBoard(gameState, roomId, board);
     socket.to(roomId).emit("updateBoard", board);
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
     
-    // Find and clean up the room the player was in
-    for (const roomId in rooms) {
-      if (rooms[roomId].includes(socket.id)) {
-        rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
-        
-        // Notify remaining player
-        if (rooms[roomId].length > 0) {
-          io.to(roomId).emit("playerLeft", "Opponent left the game");
-          io.to(roomId).emit("gameEnd", true);
-        } else {
-          // Delete empty room
-          delete rooms[roomId];
-        }
+    const room = getPlayerRoom(gameState, socket.id);
+    if (room) {
+      gameState = removePlayerFromRoom(gameState, room.id, socket.id);
+      
+      if (gameState.rooms.has(room.id)) {
+        io.to(room.id).emit("playerLeft", "Opponent left the game");
+        io.to(room.id).emit("gameEnd", true);
       }
     }
-    
-    delete playerSymbols[socket.id];
   });
 });
 
-// Listen with the httpServer, not the Express app
 httpServer.listen(PORT, HOST, () => {
   console.log(`Server running on ${HOST}:${PORT}`);
   console.log('Server is ready to accept connections');
 });
 
-// Add error handling
 httpServer.on('error', (error) => {
   console.error('Server error:', error);
 });
