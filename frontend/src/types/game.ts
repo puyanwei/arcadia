@@ -1,16 +1,18 @@
 export type PlayerSymbol = "X" | "O" | null;
-export type Board = (PlayerSymbol)[];
+export type Board = (string | null)[];
 
-export interface GameState {
+export type GameState = {
   board: Board;
-  playerSymbol: PlayerSymbol;
+  playerSymbol: string | null;
   isMyTurn: boolean;
-  playersInRoom: number;
   gameStarted: boolean;
+  gameFinished: boolean;
   gameStatus: string;
-}
+  playersInRoom: number;
+};
 
-export interface GameActions {
+export type GameActions = {
   makeMove: (index: number, roomId: string) => void;
   joinRoom: (roomId: string) => void;
-} 
+  playAgain: (roomId: string) => void;
+}; 

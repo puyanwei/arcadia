@@ -12,6 +12,7 @@ export function useGame(): GameState & GameActions {
     isMyTurn: false,
     playersInRoom: 0,
     gameStarted: false,
+    gameFinished: false,
     gameStatus: "Enter a room ID to start"
   });
 
@@ -81,6 +82,8 @@ export function useGame(): GameState & GameActions {
       setGameState(prev => ({
         ...prev,
         gameStarted: false,
+        gameFinished: true,
+        gameStatus: message,
         board: Array(9).fill(null)
       }));
       setBoard(Array(9).fill(null));
@@ -144,9 +147,27 @@ export function useGame(): GameState & GameActions {
     socket.emit("joinRoom", roomId);
   }
 
+  function playAgain(roomId: string) {
+    setGameState(prev => ({
+      ...prev,
+      gameFinished: false,
+      gameStarted: true,
+      gameStatus: prev.playerSymbol === "X" ? 
+        "Game started! Your turn (X)" : 
+        "Game started! Waiting for X's move",
+      isMyTurn: prev.playerSymbol === "X"
+    }));
+    
+    // Reset the board for all players
+    const emptyBoard = Array(9).fill(null);
+    setBoard(emptyBoard);
+    socket.emit("makeMove", { roomId, board: emptyBoard });
+  }
+
   return {
     ...gameState,
     makeMove,
-    joinRoom
+    joinRoom,
+    playAgain
   };
 } 

@@ -10,19 +10,24 @@ export default function Home() {
     playerSymbol,
     isMyTurn,
     gameStarted,
+    gameFinished,
     gameStatus,
     board,
     makeMove,
-    joinRoom
+    joinRoom,
+    playAgain
   } = useGame();
   
   const [roomId, setRoomId] = useState("");
 
   function handleJoinRoom() {
-    if (!isConnected) {
-      return; // Prevent joining if not connected
-    }
+    if (!isConnected) return;
     joinRoom(roomId);
+  }
+
+  function handlePlayAgain() {
+    if (!isConnected) return;
+    playAgain(roomId);
   }
 
   return (
@@ -84,6 +89,15 @@ export default function Home() {
           </button>
         ))}
       </div>
+
+      {gameFinished && (
+        <button
+          onClick={handlePlayAgain}
+          className="mt-4 p-2 bg-green-600 hover:bg-green-700 text-white rounded w-64"
+        >
+          Play Again
+        </button>
+      )}
     </div>
   );
 }
