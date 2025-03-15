@@ -16,16 +16,37 @@ import {
 
 dotenv.config();
 
+// Environment variable validation
+const requiredEnvVars = {
+  PORT: process.env.PORT,
+  NODE_ENV: process.env.NODE_ENV,
+  FRONTEND_URL: process.env.FRONTEND_URL
+};
+
+const missingEnvVars = Object.entries(requiredEnvVars)
+  .filter(([key, value]) => !value)
+  .map(([key]) => key);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ Missing required environment variables:');
+  missingEnvVars.forEach(envVar => {
+    console.error(`   - ${envVar}`);
+  });
+  console.error('\nPlease set these environment variables in Railway.');
+  process.exit(1);
+}
+
+// Log configuration
+console.log('Server Configuration:', {
+  PORT: process.env.PORT,
+  NODE_ENV: process.env.NODE_ENV,
+  FRONTEND_URL: process.env.FRONTEND_URL,
+  RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT
+});
+
 const HOST = '0.0.0.0';
 const PORT = parseInt(process.env.PORT || '3000');
 const DEV = process.env.NODE_ENV === 'development';
-
-// Add startup logging
-console.log('Starting server with environment:', {
-  PORT: process.env.PORT,
-  NODE_ENV: process.env.NODE_ENV,
-  RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT
-});
 
 const app = express();
 app.use(cors());

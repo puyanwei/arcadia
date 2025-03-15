@@ -3,8 +3,18 @@ import { io } from "socket.io-client";
 let socket: any;
 
 if (typeof window !== 'undefined') {
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
-  console.log('Connecting to backend:', backendUrl);
+  // Environment variable validation
+  if (!process.env.NEXT_PUBLIC_SOCKET_URL) {
+    console.error('⚠️ NEXT_PUBLIC_SOCKET_URL is not defined in environment variables!');
+    console.error('Please set NEXT_PUBLIC_SOCKET_URL in your Railway environment variables.');
+  }
+  
+  const backendUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+  console.log('Socket.IO Configuration:', {
+    backendUrl,
+    isDevelopment: process.env.NODE_ENV === 'development',
+    hasSocketUrl: !!process.env.NEXT_PUBLIC_SOCKET_URL
+  });
   
   socket = io(backendUrl, {
     reconnection: true,
@@ -17,15 +27,28 @@ if (typeof window !== 'undefined') {
   });
 
   socket.on("connect", () => {
-    console.log('Socket connected successfully');
+    console.log('Socket connected successfully to:', backendUrl);
   });
 
   socket.on("connect_error", (error: Error) => {
-    console.error("Connection error:", error, "Backend URL:", backendUrl);
+    console.error("Connection error:", {
+      error: error.message,
+      backendUrl,
+      socketId: socket.id,
+      isConnected: socket.connected,
+      envCheck: {
+        hasSocketUrl: !!process.env.NEXT_PUBLIC_SOCKET_URL,
+        nodeEnv: process.env.NODE_ENV
+      }
+    });
   });
 
   socket.on("connect_timeout", () => {
-    console.error("Connection timeout to:", backendUrl);
+    console.error("Connection timeout. Configuration:", {
+      backendUrl,
+      socketId: socket.id,
+      isConnected: socket.connected
+    });
   });
 
   socket.on("reconnect", (attemptNumber: number) => {
@@ -33,7 +56,12 @@ if (typeof window !== 'undefined') {
   });
 
   socket.on("reconnect_error", (error: Error) => {
-    console.error("Reconnection error:", error, "Backend URL:", backendUrl);
+    console.error("Reconnection error:", {
+      error: error.message,
+      backendUrl,
+      socketId: socket.id,
+      isConnected: socket.connected
+    });
   });
 }
 
