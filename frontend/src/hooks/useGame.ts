@@ -55,6 +55,8 @@ export function useGame(): GameState & GameActions {
         return {
           ...prev,
           gameStarted: true,
+          gameFinished: false,
+          rematchStatus: null,
           isMyTurn: goesFirst,
           gameStatus: goesFirst ? 
             `Game started! Your turn (${prev.playerSymbol})` : 
