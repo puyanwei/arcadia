@@ -5,7 +5,7 @@ import { useSocket } from "../hooks/useSocket";
 import { useGame } from "../hooks/useGame";
 
 export default function Home() {
-  const { isConnected } = useSocket();
+  const { isConnected, connectionError } = useSocket();
   const {
     playerSymbol,
     isMyTurn,
@@ -19,6 +19,9 @@ export default function Home() {
   const [roomId, setRoomId] = useState("");
 
   function handleJoinRoom() {
+    if (!isConnected) {
+      return; // Prevent joining if not connected
+    }
     joinRoom(roomId);
   }
 
@@ -30,6 +33,12 @@ export default function Home() {
         {isConnected ? 'Connected to server' : 'Disconnected from server'}
       </div>
 
+      {connectionError && (
+        <div className="mb-4 text-red-400">
+          Connection error: {connectionError}
+        </div>
+      )}
+
       {!playerSymbol && (
         <>
           <input
@@ -37,12 +46,14 @@ export default function Home() {
             placeholder="Enter Room ID"
             value={roomId}
             onChange={(e) => setRoomId(e.target.value)}
+            disabled={!isConnected}
           />
           <button 
             onClick={handleJoinRoom} 
-            className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded w-64 mb-4"
+            className={`p-2 ${isConnected ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'} text-white rounded w-64 mb-4`}
+            disabled={!isConnected}
           >
-            Join Game
+            {isConnected ? 'Join Game' : 'Connecting...'}
           </button>
         </>
       )}
