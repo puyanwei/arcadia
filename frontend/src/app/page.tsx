@@ -15,7 +15,8 @@ export default function Home() {
     board,
     makeMove,
     joinRoom,
-    playAgain
+    playAgain,
+    rematchStatus
   } = useGame();
   
   const [roomId, setRoomId] = useState("");
@@ -95,7 +96,9 @@ export default function Home() {
           onClick={handlePlayAgain}
           className="mt-4 p-2 bg-green-600 hover:bg-green-700 text-white rounded w-64"
         >
-          Play Again
+          {rematchStatus === "waiting" ? "Waiting for opponent..." :
+           rematchStatus === "pending" ? "Accept Rematch" :
+           "Rematch"}
         </button>
       )}
     </div>

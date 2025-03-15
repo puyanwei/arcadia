@@ -1,6 +1,8 @@
 export type PlayerSymbol = "X" | "O" | null;
 export type Board = (string | null)[];
 
+export type RematchStatus = "waiting" | "pending" | null;
+
 export type GameState = {
   board: Board;
   playerSymbol: string | null;
@@ -9,6 +11,7 @@ export type GameState = {
   gameFinished: boolean;
   gameStatus: string;
   playersInRoom: number;
+  rematchStatus: RematchStatus;
 };
 
 export type GameActions = {

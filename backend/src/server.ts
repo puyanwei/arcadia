@@ -3,7 +3,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
-import { GameState } from './game/types';
+import { GameState, RematchState } from './game/types';
 import {
   createInitialState,
   addPlayerToRoom,
@@ -54,6 +54,7 @@ app.use(cors());
 
 // Initialize game state
 let gameState: GameState = createInitialState();
+let rematchStates = new Map<string, RematchState>();
 
 app.get('/', (req, res) => {
   res.json({ 
@@ -119,16 +120,36 @@ io.on("connection", (socket) => {
     const room = gameState.rooms.get(roomId);
     if (!room) return;
 
-    // Reset the board
-    const emptyBoard = Array(9).fill(null);
-    gameState = updateBoard(gameState, roomId, emptyBoard);
-
-    // Randomly decide if we swap who goes first
-    const shouldSwapFirst = Math.random() < 0.5;
+    const currentRematchState = rematchStates.get(roomId);
     
-    // Notify players of game start and board reset
-    io.to(roomId).emit("updateBoard", emptyBoard);
-    io.to(roomId).emit("gameStart", shouldSwapFirst);
+    if (!currentRematchState) {
+      // First player requesting rematch
+      rematchStates.set(roomId, {
+        requested: true,
+        requestedBy: socket.id
+      });
+      
+      // Notify both players about the rematch request
+      socket.emit("rematchState", { status: "waiting", message: "Waiting for opponent to accept..." });
+      socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!" });
+      return;
+    }
+
+    if (currentRematchState.requestedBy !== socket.id) {
+      // Second player accepted the rematch
+      rematchStates.delete(roomId);
+
+      // Reset the board
+      const emptyBoard = Array(9).fill(null);
+      gameState = updateBoard(gameState, roomId, emptyBoard);
+
+      // Randomly decide if we swap who goes first
+      const shouldSwapFirst = Math.random() < 0.5;
+      
+      // Notify players of game start and board reset
+      io.to(roomId).emit("updateBoard", emptyBoard);
+      io.to(roomId).emit("gameStart", shouldSwapFirst);
+    }
   });
 
   socket.on("makeMove", ({ roomId, board }) => {
@@ -174,11 +195,14 @@ io.on("connection", (socket) => {
     
     const room = getPlayerRoom(gameState, socket.id);
     if (room) {
+      // Clear rematch state when a player disconnects
+      rematchStates.delete(room.id);
+      
       gameState = removePlayerFromRoom(gameState, room.id, socket.id);
       
       if (gameState.rooms.has(room.id)) {
         io.to(room.id).emit("playerLeft", "Opponent left the game");
-        io.to(room.id).emit("gameEnd", true);
+        io.to(room.id).emit("gameEnd", { winner: 'disconnect', message: "Opponent left the game" });
       }
     }
   });

@@ -12,4 +12,9 @@ export type Room = {
 export type GameState = {
   rooms: Map<RoomId, Room>;
   playerSymbols: Map<PlayerId, PlayerSymbol>;
-} 
+}
+
+export type RematchState = {
+  requested: boolean;
+  requestedBy: string | null;
+}; 

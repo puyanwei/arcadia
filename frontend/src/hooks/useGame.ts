@@ -13,7 +13,8 @@ export function useGame(): GameState & GameActions {
     playersInRoom: 0,
     gameStarted: false,
     gameFinished: false,
-    gameStatus: "Enter a room ID to start"
+    gameStatus: "Enter a room ID to start",
+    rematchStatus: null
   });
 
   useEffect(() => {
@@ -96,6 +97,14 @@ export function useGame(): GameState & GameActions {
       setBoard(Array(9).fill(null));
     });
 
+    socket.on("rematchState", ({ status, message }) => {
+      setGameState(prev => ({
+        ...prev,
+        rematchStatus: status,
+        gameStatus: message
+      }));
+    });
+
     return () => {
       socket.off("updateBoard");
       socket.off("playerSymbol");
@@ -105,6 +114,7 @@ export function useGame(): GameState & GameActions {
       socket.off("error");
       socket.off("playerLeft");
       socket.off("gameEnd");
+      socket.off("rematchState");
     };
   }, [socket, setBoard]);
 
@@ -149,9 +159,8 @@ export function useGame(): GameState & GameActions {
   function playAgain(roomId: string) {
     setGameState(prev => ({
       ...prev,
-      gameFinished: false,
-      gameStarted: false,
-      gameStatus: "Starting new game..."
+      gameFinished: prev.rematchStatus === "pending", // Only close the game if accepting rematch
+      gameStatus: "Requesting rematch..."
     }));
     
     socket.emit("playAgain", roomId);
