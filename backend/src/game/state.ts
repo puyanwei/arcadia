@@ -102,7 +102,7 @@ export function getPlayerSymbol(state: GameState, playerId: PlayerId): PlayerSym
   return state.playerSymbols.get(playerId);
 }
 
-export function checkWinner(board: string[]): string | null {
+export function checkWinner(board: (string | null)[]): string | null {
   // Check rows
   for (let i = 0; i < 9; i += 3) {
     if (board[i] && board[i] === board[i + 1] && board[i] === board[i + 2]) {
@@ -126,7 +126,7 @@ export function checkWinner(board: string[]): string | null {
   }
 
   // Check for draw
-  if (board.every(cell => cell !== '-')) {
+  if (board.every(cell => cell !== null)) {
     return 'draw';
   }
 

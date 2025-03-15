@@ -120,7 +120,7 @@ io.on("connection", (socket) => {
     if (!room) return;
 
     // Reset the board
-    const emptyBoard = Array(9).fill('-');
+    const emptyBoard = Array(9).fill(null);
     gameState = updateBoard(gameState, roomId, emptyBoard);
 
     // Randomly decide if we swap who goes first
@@ -151,7 +151,7 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("gameEnd", { winner: result, message });
       
       // Reset the room's board
-      const emptyBoard = Array(9).fill('-');
+      const emptyBoard = Array(9).fill(null);
       gameState = updateBoard(gameState, roomId, emptyBoard);
       io.to(roomId).emit("updateBoard", emptyBoard);
     }
