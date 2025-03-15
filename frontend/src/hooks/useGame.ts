@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/game';
 import { useSocket } from './useSocket';
-import { GameState, GameActions, Board } from '../types/game';
+import { GameState, GameActions, Board, RematchStatus } from '../types/game';
 
 export function useGame(): GameState & GameActions {
   const { socket } = useSocket();
@@ -97,7 +97,7 @@ export function useGame(): GameState & GameActions {
       setBoard(Array(9).fill(null));
     });
 
-    socket.on("rematchState", ({ status, message }) => {
+    socket.on("rematchState", ({ status, message }: { status: RematchStatus, message: string }) => {
       setGameState(prev => ({
         ...prev,
         rematchStatus: status,
