@@ -11,7 +11,8 @@ import {
   updateBoard,
   isPlayerInAnyRoom,
   getPlayerRoom,
-  getPlayerSymbol
+  getPlayerSymbol,
+  checkWinner
 } from './game/state';
 
 dotenv.config();
@@ -65,10 +66,16 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: DEV ? '*' : process.env.FRONTEND_URL,
+    origin: [
+      'https://ttt-multiplayer.up.railway.app',
+      'http://localhost:3000'
+    ],
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ["my-custom-header"],
   },
+  allowEIO3: true,
+  transports: ['websocket', 'polling']
 });
 
 function emitGameState(roomId: string) {
@@ -117,6 +124,21 @@ io.on("connection", (socket) => {
 
     gameState = updateBoard(gameState, roomId, board);
     socket.to(roomId).emit("updateBoard", board);
+
+    // Check for win or draw
+    const result = checkWinner(board);
+    if (result) {
+      const message = result === 'draw' 
+        ? "Game ended in a draw!" 
+        : `Player ${result} wins!`;
+      
+      io.to(roomId).emit("gameEnd", { winner: result, message });
+      
+      // Reset the room's board
+      const emptyBoard = Array(9).fill('-');
+      gameState = updateBoard(gameState, roomId, emptyBoard);
+      io.to(roomId).emit("updateBoard", emptyBoard);
+    }
   });
 
   socket.on("disconnect", () => {

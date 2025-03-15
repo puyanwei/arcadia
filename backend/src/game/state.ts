@@ -86,4 +86,35 @@ export function getPlayerRoom(state: GameState, playerId: PlayerId): Room | unde
 
 export function getPlayerSymbol(state: GameState, playerId: PlayerId): PlayerSymbol | undefined {
   return state.playerSymbols.get(playerId);
+}
+
+export function checkWinner(board: string[]): string | null {
+  // Check rows
+  for (let i = 0; i < 9; i += 3) {
+    if (board[i] && board[i] === board[i + 1] && board[i] === board[i + 2]) {
+      return board[i];
+    }
+  }
+
+  // Check columns
+  for (let i = 0; i < 3; i++) {
+    if (board[i] && board[i] === board[i + 3] && board[i] === board[i + 6]) {
+      return board[i];
+    }
+  }
+
+  // Check diagonals
+  if (board[0] && board[0] === board[4] && board[0] === board[8]) {
+    return board[0];
+  }
+  if (board[2] && board[2] === board[4] && board[2] === board[6]) {
+    return board[2];
+  }
+
+  // Check for draw
+  if (board.every(cell => cell !== '-')) {
+    return 'draw';
+  }
+
+  return null;
 } 

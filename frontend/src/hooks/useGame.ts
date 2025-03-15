@@ -77,13 +77,21 @@ export function useGame(): GameState & GameActions {
       }));
     });
 
-    socket.on("gameEnd", () => {
+    socket.on("gameEnd", ({ winner, message }: { winner: string, message: string }) => {
       setGameState(prev => ({
         ...prev,
         gameStarted: false,
         board: Array(9).fill(null)
       }));
       setBoard(Array(9).fill(null));
+      
+      // Reset after 3 seconds
+      setTimeout(() => {
+        setGameState(prev => ({
+          ...prev,
+          gameStatus: winner === 'draw' ? "Game ended in a draw!" : `Player ${winner} won!`
+        }));
+      }, 1000);
     });
 
     return () => {
