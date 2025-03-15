@@ -21,12 +21,22 @@ export function useGame(): GameState & GameActions {
     socket.on("updateBoard", (newBoard: Board) => {
       console.log('Board updated:', newBoard);
       setBoard(newBoard);
-      setGameState(prev => ({
-        ...prev,
-        board: newBoard,
-        isMyTurn: true,
-        gameStatus: "Your turn!"
-      }));
+      setGameState(prev => {
+        // Don't update turn status or game status if the game has ended
+        if (prev.gameFinished) {
+          return {
+            ...prev,
+            board: newBoard
+          };
+        }
+        
+        return {
+          ...prev,
+          board: newBoard,
+          isMyTurn: true,
+          gameStatus: "Your turn!"
+        };
+      });
     });
 
     socket.on("playerSymbol", (symbol: "X" | "O") => {
@@ -94,8 +104,11 @@ export function useGame(): GameState & GameActions {
         gameStarted: false,
         gameFinished: true,
         gameStatus: message,
-        isMyTurn: false
+        isMyTurn: false,
+        board: prev.board // Preserve the final board state
       }));
+      // Add a console log to help debug the game end state
+      console.log('Game ended:', { winner, message });
     });
 
     socket.on("rematchState", ({ status, message }: { status: RematchStatus, message: string }) => {
