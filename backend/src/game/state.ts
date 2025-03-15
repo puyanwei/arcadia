@@ -15,12 +15,26 @@ export function createRoom(roomId: RoomId): Room {
   };
 }
 
+function shuffleSymbols(): ["X", "O"] | ["O", "X"] {
+  return Math.random() < 0.5 ? ["X", "O"] : ["O", "X"];
+}
+
 export function addPlayerToRoom(state: GameState, roomId: RoomId, playerId: PlayerId): GameState {
   const room = state.rooms.get(roomId) || createRoom(roomId);
   
   if (room.players.length >= 2) return state;
   
-  const symbol: PlayerSymbol = room.players.length === 0 ? "X" : "O";
+  // If this is the first player, randomly assign X or O
+  let symbol: PlayerSymbol;
+  if (room.players.length === 0) {
+    const [firstSymbol] = shuffleSymbols();
+    symbol = firstSymbol;
+  } else {
+    // Second player gets the opposite symbol
+    const firstPlayerSymbol = state.playerSymbols.get(room.players[0]);
+    symbol = firstPlayerSymbol === "X" ? "O" : "X";
+  }
+
   const updatedRoom = {
     ...room,
     players: [...room.players, playerId]

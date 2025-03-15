@@ -115,6 +115,22 @@ io.on("connection", (socket) => {
     emitGameState(roomId);
   });
 
+  socket.on("playAgain", (roomId) => {
+    const room = gameState.rooms.get(roomId);
+    if (!room) return;
+
+    // Reset the board
+    const emptyBoard = Array(9).fill('-');
+    gameState = updateBoard(gameState, roomId, emptyBoard);
+
+    // Randomly decide if we swap who goes first
+    const shouldSwapFirst = Math.random() < 0.5;
+    
+    // Notify players of game start and board reset
+    io.to(roomId).emit("updateBoard", emptyBoard);
+    io.to(roomId).emit("gameStart", shouldSwapFirst);
+  });
+
   socket.on("makeMove", ({ roomId, board }) => {
     const room = getPlayerRoom(gameState, socket.id);
     if (!room || room.id !== roomId) {

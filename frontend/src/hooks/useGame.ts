@@ -45,14 +45,21 @@ export function useGame(): GameState & GameActions {
       }));
     });
 
-    socket.on("gameStart", () => {
-      setGameState(prev => ({
-        ...prev,
-        gameStarted: true,
-        gameStatus: prev.playerSymbol === "X" ? 
-          "Game started! Your turn (X)" : 
-          "Game started! Waiting for X's move"
-      }));
+    socket.on("gameStart", (shouldSwapFirst: boolean) => {
+      setGameState(prev => {
+        const isX = prev.playerSymbol === "X";
+        // If shouldSwapFirst is true, O goes first this game
+        const goesFirst = shouldSwapFirst ? !isX : isX;
+        
+        return {
+          ...prev,
+          gameStarted: true,
+          isMyTurn: goesFirst,
+          gameStatus: goesFirst ? 
+            `Game started! Your turn (${prev.playerSymbol})` : 
+            `Game started! Waiting for opponent's move...`
+        };
+      });
     });
 
     socket.on("roomFull", () => {
@@ -151,17 +158,11 @@ export function useGame(): GameState & GameActions {
     setGameState(prev => ({
       ...prev,
       gameFinished: false,
-      gameStarted: true,
-      gameStatus: prev.playerSymbol === "X" ? 
-        "Game started! Your turn (X)" : 
-        "Game started! Waiting for X's move",
-      isMyTurn: prev.playerSymbol === "X"
+      gameStarted: false,
+      gameStatus: "Starting new game..."
     }));
     
-    // Reset the board for all players
-    const emptyBoard = Array(9).fill(null);
-    setBoard(emptyBoard);
-    socket.emit("makeMove", { roomId, board: emptyBoard });
+    socket.emit("playAgain", roomId);
   }
 
   return {
