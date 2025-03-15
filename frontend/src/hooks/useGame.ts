@@ -94,14 +94,6 @@ export function useGame(): GameState & GameActions {
         board: Array(9).fill(null)
       }));
       setBoard(Array(9).fill(null));
-      
-      // Reset after 3 seconds
-      setTimeout(() => {
-        setGameState(prev => ({
-          ...prev,
-          gameStatus: winner === 'draw' ? "Game ended in a draw!" : `Player ${winner} won!`
-        }));
-      }, 1000);
     });
 
     return () => {

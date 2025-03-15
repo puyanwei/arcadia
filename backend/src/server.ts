@@ -144,11 +144,18 @@ io.on("connection", (socket) => {
     // Check for win or draw
     const result = checkWinner(board);
     if (result) {
-      const message = result === 'draw' 
-        ? "Game ended in a draw!" 
-        : `Player ${result} wins!`;
+      let message;
+      let winner;
       
-      io.to(roomId).emit("gameEnd", { winner: result, message });
+      if (result === 'draw') {
+        message = "Game ended in a draw!";
+        winner = 'draw';
+      } else {
+        message = `Player ${result} wins!`;
+        winner = result;
+      }
+      
+      io.to(roomId).emit("gameEnd", { winner, message });
       
       // Reset the room's board
       const emptyBoard = Array(9).fill(null);
