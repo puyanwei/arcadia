@@ -92,9 +92,8 @@ export function useGame(): GameState & GameActions {
         gameStarted: false,
         gameFinished: true,
         gameStatus: message,
-        board: Array(9).fill(null)
+        isMyTurn: false
       }));
-      setBoard(Array(9).fill(null));
     });
 
     socket.on("rematchState", ({ status, message }: { status: RematchStatus, message: string }) => {
@@ -163,6 +162,8 @@ export function useGame(): GameState & GameActions {
       gameStatus: "Requesting rematch..."
     }));
     
+    // Reset the board when requesting a rematch
+    setBoard(Array(9).fill(null));
     socket.emit("playAgain", roomId);
   }
 
