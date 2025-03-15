@@ -40,32 +40,76 @@ const io = new Server(httpServer, {
 });
 
 const rooms: Record<string, string[]> = {}; // Stores players per room
+const playerSymbols: Record<string, "X" | "O"> = {}; // Stores player symbols
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   socket.on("joinRoom", (roomId) => {
-    if (!rooms[roomId]) rooms[roomId] = [];
-    if (rooms[roomId].length < 2) {
-      rooms[roomId].push(socket.id);
-      socket.join(roomId);
-      console.log(`User ${socket.id} joined room ${roomId}`);
-      io.to(roomId).emit("playerJoined", rooms[roomId]);
-    } else {
+    // Check if player is already in a room
+    const currentRoom = Object.keys(rooms).find(room => rooms[room].includes(socket.id));
+    if (currentRoom) {
+      socket.emit("error", "You are already in a room");
+      return;
+    }
+
+    // Initialize room if it doesn't exist
+    if (!rooms[roomId]) {
+      rooms[roomId] = [];
+    }
+
+    // Check room capacity
+    if (rooms[roomId].length >= 2) {
       socket.emit("roomFull");
+      return;
+    }
+
+    // Join room and assign symbol
+    rooms[roomId].push(socket.id);
+    socket.join(roomId);
+    
+    const symbol = rooms[roomId].length === 1 ? "X" : "O";
+    playerSymbols[socket.id] = symbol;
+    socket.emit("playerSymbol", symbol);
+    
+    console.log(`User ${socket.id} joined room ${roomId} as ${symbol}`);
+    io.to(roomId).emit("playerJoined", rooms[roomId].length);
+
+    // If room is now full, notify players
+    if (rooms[roomId].length === 2) {
+      io.to(roomId).emit("gameStart", true);
     }
   });
 
   socket.on("makeMove", ({ roomId, board }) => {
+    // Verify player is in the room
+    if (!rooms[roomId]?.includes(socket.id)) {
+      socket.emit("error", "You are not in this room");
+      return;
+    }
     socket.to(roomId).emit("updateBoard", board);
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
+    
+    // Find and clean up the room the player was in
     for (const roomId in rooms) {
-      rooms[roomId] = rooms[roomId].filter((id) => id !== socket.id);
-      io.to(roomId).emit("playerLeft", rooms[roomId]);
+      if (rooms[roomId].includes(socket.id)) {
+        rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
+        
+        // Notify remaining player
+        if (rooms[roomId].length > 0) {
+          io.to(roomId).emit("playerLeft", "Opponent left the game");
+          io.to(roomId).emit("gameEnd", true);
+        } else {
+          // Delete empty room
+          delete rooms[roomId];
+        }
+      }
     }
+    
+    delete playerSymbols[socket.id];
   });
 });
 
