@@ -125,8 +125,9 @@ export function checkWinner(board: (string | null)[]): string | null {
     return board[2];
   }
 
-  // Check for draw
-  if (board.every(cell => cell !== null)) {
+  // Check for draw - make sure all cells are filled
+  const isDraw = board.every(cell => cell !== null);
+  if (isDraw) {
     return 'draw';
   }
 

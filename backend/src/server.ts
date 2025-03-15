@@ -166,6 +166,7 @@ io.on("connection", (socket) => {
     const result = checkWinner(board);
     if (result) {
       if (result === 'draw') {
+        // Send draw message to all players in the room
         io.to(roomId).emit("gameEnd", { 
           winner: 'draw', 
           message: "Game ended in a draw!" 
@@ -183,10 +184,8 @@ io.on("connection", (socket) => {
         });
       }
       
-      // Reset the room's board
-      const emptyBoard = Array(9).fill(null);
-      gameState = updateBoard(gameState, roomId, emptyBoard);
-      io.to(roomId).emit("updateBoard", emptyBoard);
+      // Don't reset the board immediately - let players see the final state
+      // The board will be reset when both players accept the rematch
     }
   });
 
