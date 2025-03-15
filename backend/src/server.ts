@@ -144,18 +144,23 @@ io.on("connection", (socket) => {
     // Check for win or draw
     const result = checkWinner(board);
     if (result) {
-      let message;
-      let winner;
-      
       if (result === 'draw') {
-        message = "Game ended in a draw!";
-        winner = 'draw';
+        io.to(roomId).emit("gameEnd", { 
+          winner: 'draw', 
+          message: "Game ended in a draw!" 
+        });
       } else {
-        message = `Player ${result} wins!`;
-        winner = result;
+        // Send different messages to winner and loser
+        const winnerSymbol = result;
+        room.players.forEach(playerId => {
+          const playerSymbol = getPlayerSymbol(gameState, playerId);
+          const isWinner = playerSymbol === winnerSymbol;
+          io.to(playerId).emit("gameEnd", {
+            winner: result,
+            message: isWinner ? "You won!" : "You lost!"
+          });
+        });
       }
-      
-      io.to(roomId).emit("gameEnd", { winner, message });
       
       // Reset the room's board
       const emptyBoard = Array(9).fill(null);
