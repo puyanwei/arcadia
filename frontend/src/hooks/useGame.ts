@@ -73,6 +73,8 @@ export function useGame(): GameState & GameActions {
             `Game started! Waiting for opponent's move...`
         };
       });
+      // Reset the board only when both players have accepted the rematch
+      setBoard(Array(9).fill(null));
     });
 
     socket.on("roomFull", () => {
@@ -177,8 +179,6 @@ export function useGame(): GameState & GameActions {
       gameStatus: "Requesting rematch..."
     }));
     
-    // Reset the board when requesting a rematch
-    setBoard(Array(9).fill(null));
     socket.emit("playAgain", roomId);
   }
 
