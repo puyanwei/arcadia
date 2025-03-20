@@ -52,14 +52,14 @@ export default function Home() {
             placeholder="Enter Room ID"
             value={roomId}
             onChange={(e) => setRoomId(e.target.value)}
-            disabled={!isConnected}
+            disabled={!isConnected || gameStarted}
           />
           <button 
             onClick={handleJoinRoom} 
-            className={`p-2 ${isConnected ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'} text-white rounded w-64 mb-4`}
-            disabled={!isConnected}
+            className={`p-2 ${isConnected && !gameStarted ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'} text-white rounded w-64 mb-4`}
+            disabled={!isConnected || gameStarted}
           >
-            {isConnected ? 'Join Game' : 'Connecting...'}
+            {!isConnected ? 'Connecting...' : gameStarted ? 'Already in a game' : 'Join Game'}
           </button>
         </>
       )}

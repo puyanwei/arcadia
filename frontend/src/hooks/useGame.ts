@@ -87,7 +87,9 @@ export function useGame(): GameState & GameActions {
     socket.on("error", (message: string) => {
       setGameState(prev => ({
         ...prev,
-        gameStatus: `Error: ${message}`
+        gameStatus: message.includes("already in a room") ? 
+          "You're already in a game. Please finish or leave your current game first." : 
+          `Error: ${message}`
       }));
     });
 
