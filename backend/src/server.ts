@@ -3,7 +3,7 @@ import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
-import { gameHandlers, GameState } from './games';
+import { gameHandlers, GameState, GameType } from './games';
 import { emitGameState } from './games/tictactoe/handlers';
 import { getPlayerRoom } from "./games/tictactoe/state";
 import { RematchState } from './games/tictactoe/types';
@@ -184,9 +184,9 @@ io.on("connection", (socket: Socket) => {
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
     
-    const gameType = getGameTypeFromRoom(room.id);
-    const room = getPlayerRoom(gameStates.get(gameType)!, socket.id);
+    const room = getPlayerRoom(gameStates.get('tictactoe')!, socket.id);
     if (room) {
+      const gameType = getGameTypeFromRoom(room.id);
       rematchStates.delete(room.id);
       
       const handler = gameHandlers[gameType];

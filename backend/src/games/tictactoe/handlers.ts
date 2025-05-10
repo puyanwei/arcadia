@@ -1,4 +1,4 @@
-import { GameState } from '../index';
+import { GameState, GameType } from '../index';
 import { Server, Socket } from 'socket.io';
 import { 
   createInitialState, 
