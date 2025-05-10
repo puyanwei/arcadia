@@ -165,7 +165,7 @@ export function useTicTacToe(): GameState & GameActions {
       ...prev,
       gameStatus: `Joining room: ${roomId}...`
     }));
-    socket.emit("joinRoom", roomId);
+    socket.emit("joinRoom", { gameType: 'tictactoe', roomId });
   }
 
   function playAgain(roomId: string) {
