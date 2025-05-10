@@ -1,19 +1,12 @@
 import express from "express";
 import { createServer } from "http";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
-import { GameState, RematchState } from './game/types';
-import {
-  createInitialState,
-  addPlayerToRoom,
-  removePlayerFromRoom,
-  updateBoard,
-  isPlayerInAnyRoom,
-  getPlayerRoom,
-  getPlayerSymbol,
-  checkWinner
-} from './game/state';
+import { gameHandlers, GameState } from './games';
+import { emitGameState } from './games/tictactoe/handlers';
+import { getPlayerRoom } from "./games/tictactoe/state";
+import { RematchState } from './games/tictactoe/types';
 
 dotenv.config();
 
@@ -52,14 +45,19 @@ const DEV = process.env.NODE_ENV === 'development';
 const app = express();
 app.use(cors());
 
-// Initialize game state
-let gameState: GameState = createInitialState();
-let rematchStates = new Map<string, RematchState>();
+// Initialize game states and rematch states
+const gameStates = new Map(
+  Object.entries(gameHandlers).map(([gameType, handler]) => [
+    gameType,
+    handler.createInitialState()
+  ])
+);
+const rematchStates = new Map<string, RematchState>();
 
 app.get('/', (req, res) => {
   res.json({ 
     status: 'Server is running',
-    rooms: gameState.rooms.size
+    rooms: gameStates.get('tictactoe')?.rooms.size || 0
   });
 });
 
@@ -79,103 +77,100 @@ const io = new Server(httpServer, {
   transports: ['websocket', 'polling']
 });
 
-function emitGameState(roomId: string) {
-  const room = gameState.rooms.get(roomId);
-  if (room) {
-    io.to(roomId).emit("playerJoined", room.players.length);
-    if (room.players.length === 2) {
-      io.to(roomId).emit("gameStart", true);
-    }
-  }
+function getGameTypeFromRoom(roomId: string): GameType {
+  // For now hardcoded to tictactoe, but this should be stored with the room
+  return 'tictactoe';
 }
 
-io.on("connection", (socket) => {
+function validateGameType(gameType: string): gameType is GameType {
+  return gameType in gameHandlers;
+}
+
+io.on("connection", (socket: Socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("joinRoom", (roomId) => {
-    if (isPlayerInAnyRoom(gameState, socket.id)) {
-      socket.emit("error", "You are already in a room");
+  socket.on("joinRoom", ({ gameType, roomId }) => {
+    if (!validateGameType(gameType)) {
+      socket.emit("error", "Invalid game type");
       return;
     }
 
-    const room = gameState.rooms.get(roomId);
-    if (room?.players.length >= 2) {
-      socket.emit("roomFull");
+    const handler = gameHandlers[gameType];
+    if (!handler) {
+      socket.emit("error", "Invalid game handler");
       return;
     }
 
-    gameState = addPlayerToRoom(gameState, roomId, socket.id);
-    socket.join(roomId);
-
-    const symbol = getPlayerSymbol(gameState, socket.id);
-    if (symbol) {
-      socket.emit("playerSymbol", symbol);
-      console.log(`User ${socket.id} joined room ${roomId} as ${symbol}`);
+    try {
+      const gameState = gameStates.get(gameType)!;
+      const newGameState = handler.handleJoinRoom(gameState, roomId, socket.id);
+      gameStates.set(gameType, newGameState);
+      
+      socket.join(roomId);
+      const symbol = handler.getPlayerSymbol(newGameState, socket.id);
+      if (symbol) {
+        socket.emit("playerSymbol", symbol);
+      }
+      
+      emitGameState(io, newGameState, roomId);
+    } catch (error) {
+      socket.emit("error", error.message);
     }
-
-    emitGameState(roomId);
   });
 
-  socket.on("playAgain", (roomId) => {
+  socket.on("playAgain", ({ gameType, roomId }) => {
+    const handler = gameHandlers[gameType];
+    const gameState = gameStates.get(gameType)!;
     const room = gameState.rooms.get(roomId);
     if (!room) return;
 
     const currentRematchState = rematchStates.get(roomId);
-    
-    if (!currentRematchState) {
-      // First player requesting rematch
-      rematchStates.set(roomId, {
-        requested: true,
-        requestedBy: socket.id
-      });
-      
-      // Notify both players about the rematch request
-      socket.emit("rematchState", { status: "waiting", message: "Waiting for opponent to accept..." });
-      socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!" });
-      return;
-    }
+    const { newGameState, newRematchState } = handler.handleRematch(
+      gameState,
+      roomId,
+      socket.id,
+      currentRematchState,
+      socket,
+      io
+    );
 
-    if (currentRematchState.requestedBy !== socket.id) {
-      // Second player accepted the rematch
+    gameStates.set(gameType, newGameState);
+    if (newRematchState) {
+      rematchStates.set(roomId, newRematchState);
+    } else {
       rematchStates.delete(roomId);
-
-      // Reset the board
-      const emptyBoard = Array(9).fill(null);
-      gameState = updateBoard(gameState, roomId, emptyBoard);
-
-      // Randomly decide if we swap who goes first
-      const shouldSwapFirst = Math.random() < 0.5;
-      
-      // Notify players of game start and board reset
-      io.to(roomId).emit("updateBoard", emptyBoard);
-      io.to(roomId).emit("gameStart", shouldSwapFirst);
     }
   });
 
-  socket.on("makeMove", ({ roomId, board }) => {
-    const room = getPlayerRoom(gameState, socket.id);
+  socket.on("makeMove", ({ gameType, roomId, board }) => {
+    const room = getPlayerRoom(gameStates.get(gameType)!, socket.id);
     if (!room || room.id !== roomId) {
       socket.emit("error", "You are not in this room");
       return;
     }
 
-    gameState = updateBoard(gameState, roomId, board);
+    const handler = gameHandlers[gameType];
+    if (!handler) {
+      socket.emit("error", "Game handler not found");
+      return;
+    }
+
+    const newGameState = handler.handleMakeMove(gameStates.get(gameType)!, roomId, socket.id, { board });
+    gameStates.set(gameType, newGameState);
     socket.to(roomId).emit("updateBoard", board);
 
     // Check for win or draw
-    const result = checkWinner(board);
+    const result = handler.checkWinner(board);
     if (result) {
       if (result === 'draw') {
-        // Send draw message to all players in the room
         io.to(roomId).emit("gameEnd", { 
           winner: 'draw', 
           message: "Game ended in a draw!" 
         });
       } else {
-        // Send different messages to winner and loser
         const winnerSymbol = result;
         room.players.forEach(playerId => {
-          const playerSymbol = getPlayerSymbol(gameState, playerId);
+          const playerSymbol = handler.getPlayerSymbol(gameStates.get(gameType)!, playerId);
           const isWinner = playerSymbol === winnerSymbol;
           io.to(playerId).emit("gameEnd", {
             winner: result,
@@ -183,25 +178,26 @@ io.on("connection", (socket) => {
           });
         });
       }
-      
-      // Don't reset the board immediately - let players see the final state
-      // The board will be reset when both players accept the rematch
     }
   });
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
     
-    const room = getPlayerRoom(gameState, socket.id);
+    const gameType = getGameTypeFromRoom(room.id);
+    const room = getPlayerRoom(gameStates.get(gameType)!, socket.id);
     if (room) {
-      // Clear rematch state when a player disconnects
       rematchStates.delete(room.id);
       
-      gameState = removePlayerFromRoom(gameState, room.id, socket.id);
-      
-      if (gameState.rooms.has(room.id)) {
-        io.to(room.id).emit("playerLeft", "Opponent left the game");
-        io.to(room.id).emit("gameEnd", { winner: 'disconnect', message: "Opponent left the game" });
+      const handler = gameHandlers[gameType];
+      if (handler) {
+        const newGameState = handler.handleDisconnect(gameStates.get(gameType)!, room.id, socket.id);
+        gameStates.set(gameType, newGameState);
+        
+        if (gameStates.get(gameType)!.rooms.has(room.id)) {
+          io.to(room.id).emit("playerLeft", "Opponent left the game");
+          io.to(room.id).emit("gameEnd", { winner: 'disconnect', message: "Opponent left the game" });
+        }
       }
     }
   });
