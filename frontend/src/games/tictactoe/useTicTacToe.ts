@@ -3,6 +3,29 @@ import { useGameStore } from '@/store/game';
 import { useSocket } from '@/hooks/useSocket';
 import { GameState, GameActions, Board, RematchStatus } from './types';
 
+type SocketEvent = 
+  | "updateBoard"
+  | "playerSymbol"
+  | "playerJoined"
+  | "gameStart"
+  | "roomFull"
+  | "error"
+  | "playerLeft"
+  | "gameEnd"
+  | "rematchState";
+
+const socketEvents: SocketEvent[] = [
+  "updateBoard",
+  "playerSymbol",
+  "playerJoined",
+  "gameStart",
+  "roomFull",
+  "error",
+  "playerLeft",
+  "gameEnd",
+  "rematchState"
+] as const;
+
 export function useTicTacToe(): GameState & GameActions {
   const { socket } = useSocket();
   const { board, setBoard } = useGameStore();
@@ -117,17 +140,7 @@ export function useTicTacToe(): GameState & GameActions {
       }));
     });
 
-    return () => {
-      socket.off("updateBoard");
-      socket.off("playerSymbol");
-      socket.off("playerJoined");
-      socket.off("gameStart");
-      socket.off("roomFull");
-      socket.off("error");
-      socket.off("playerLeft");
-      socket.off("gameEnd");
-      socket.off("rematchState");
-    };
+    return () => socketEvents.forEach(event => socket.off(event));
   }, [socket, setBoard]);
 
   function makeMove(index: number, roomId: string) {

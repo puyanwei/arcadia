@@ -1,11 +1,9 @@
- "use client";
+"use client";
 
 import { useParams } from 'next/navigation';
-import TicTacToe from '@/games/tictactoe/Board';
+import TicTacToe from '@/games/tictactoe/TicTacToe';
 
-type GameComponents = {
-  [key: string]: React.ComponentType;
-};
+type GameComponents = Record<string, React.ComponentType>;
 
 const gameComponents: GameComponents = {
   tictactoe: TicTacToe,

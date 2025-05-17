@@ -66,7 +66,7 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: [
-      'https://ttt-multiplayer.up.railway.app',
+      'https://arcardia.up.railway.app',
       'http://localhost:3000'
     ],
     methods: ["GET", "POST"],
