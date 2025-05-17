@@ -1,214 +1,63 @@
-import { useEffect, useState } from 'react';
-import { useConnectFourGameStore, Grid } from '@/store/game';
-import { useSocket } from '@/hooks/useSocket';
-import { GameState, GameActions, RematchStatus } from './types';
-import { Board } from '@/types/game';
+import { useState } from 'react';
+import { boardGrid } from '@/store/game';
+import { useGameRoom } from '@/hooks/useGameRoom';
 
-type SocketEvent = 
-  | "updateBoard"
-  | "playerSymbol"
-  | "playerJoined"
-  | "gameStart"
-  | "roomFull"
-  | "error"
-  | "playerLeft"
-  | "gameEnd"
-  | "rematchState";
+export type ConnectFourCell = 'yellow' | 'red' | 'invalid' | 'valid';
 
-const socketEvents: SocketEvent[] = [
-  "updateBoard",
-  "playerSymbol",
-  "playerJoined",
-  "gameStart",
-  "roomFull",
-  "error",
-  "playerLeft",
-  "gameEnd",
-  "rematchState"
-] as const;
+export function useConnectFour() {
+  const columns = boardGrid['connect-four'].columns;
+  const rows = boardGrid['connect-four'].rows;
+  const [board, setBoard] = useState<ConnectFourCell[]>(Array(columns * rows).fill('valid'));
+  const [currentPlayer, setCurrentPlayer] = useState<'yellow' | 'red'>('yellow');
+  const { roomState, joinRoom, playAgain } = useGameRoom('connect-four');
 
-type PlayerSymbol = "Red" | "Yellow";
-
-type UseConnectFourReturn = GameActions & GameState & {
-  resetBoard: () => void;
-  boardGrid: Grid;
-};
-
-export function useConnectFour(): UseConnectFourReturn {
-  const { socket } = useSocket();
-  const { board, setBoard, boardGrid } = useConnectFourGameStore();
-  const [gameState, setGameState] = useState<GameState>({
-    board: Array(boardGrid.columns * boardGrid.rows).fill(null),
-    playerSymbol: null,
-    isMyTurn: false,
-    playersInRoom: 0,
-    gameStarted: false,
-    gameFinished: false,
-    gameStatus: "Enter a room ID to start",
-    rematchStatus: null
-  });
-
-  useEffect(() => {
-    socket.on("updateBoard", (newBoard: Board) => {
-      console.log('Board updated:', newBoard);
-      setBoard(newBoard);
-      setGameState(prev => {
-        if (prev.gameFinished) {
-          return {
-            ...prev,
-            board: newBoard
-          };
-        }
-        
-        return {
-          ...prev,
-          board: newBoard,
-          isMyTurn: true,
-          gameStatus: "Your turn!"
-        };
-      });
-    });
-
-    socket.on("playerSymbol", (symbol: PlayerSymbol) => {
-      setGameState(prev => ({
-        ...prev,
-        playerSymbol: symbol,
-        isMyTurn: symbol === "Red",
-        gameStatus: `You are player ${symbol}. ${symbol === "Red" ? "It's your turn!" : "Waiting for Red to move..."}`
-      }));
-    });
-
-    socket.on("playerJoined", (playerCount: number) => {
-      setGameState(prev => ({
-        ...prev,
-        playersInRoom: playerCount,
-        gameStatus: `Players in room: ${playerCount}/2 ${playerCount === 1 ? "- Waiting for opponent..." : ""}`
-      }));
-    });
-
-    socket.on("gameStart", (shouldSwapFirst: boolean) => {
-      setGameState(prev => {
-        const isX = prev.playerSymbol === "X";
-        const goesFirst = shouldSwapFirst ? !isX : isX;
-        
-        return {
-          ...prev,
-          gameStarted: true,
-          gameFinished: false,
-          rematchStatus: null,
-          isMyTurn: goesFirst,
-          gameStatus: goesFirst ? 
-            `Game started! Your turn (${prev.playerSymbol})` : 
-            `Game started! Waiting for opponent's move...`
-        };
-      });
-      setBoard(Array(boardGrid.columns * boardGrid.rows).fill(null));
-    });
-
-    socket.on("roomFull", () => {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: "Room is full! Try another room ID"
-      }));
-    });
-
-    socket.on("error", (message: string) => {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: `Error: ${message}`
-      }));
-    });
-
-    socket.on("playerLeft", (message: string) => {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: message,
-        gameStarted: false,
-        playersInRoom: prev.playersInRoom - 1
-      }));
-    });
-
-    socket.on("gameEnd", ({ winner, message }: { winner: string, message: string }) => {
-      setGameState(prev => ({
-        ...prev,
-        gameStarted: false,
-        gameFinished: true,
-        gameStatus: message,
-        isMyTurn: false,
-        board: prev.board
-      }));
-      console.log('Game ended:', { winner, message });
-    });
-
-    socket.on("rematchState", ({ status, message }: { status: RematchStatus, message: string }) => {
-      setGameState(prev => ({
-        ...prev,
-        rematchStatus: status,
-        gameStatus: message
-      }));
-    });
-
-    return () => socketEvents.forEach(event => socket.off(event));
-  }, [socket, setBoard]);
-
-  function makeMove(index: number, roomId: string) {
-    if (!gameState.gameStarted) {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: "Waiting for another player to join..."
-      }));
-      return;
+  function isLowestEmptyCellInColumn(board: ConnectFourCell[], idx: number, col: number, columns: number, rows: number): boolean {
+    for (let row = rows - 1; row >= 0; row--) {
+      const currentIdx = row * columns + col;
+      if (currentIdx === idx) return board[currentIdx] === 'valid';
+      if (board[currentIdx] === 'valid') return false;
     }
-
-    if (!board[index] && gameState.isMyTurn && gameState.playerSymbol) {
-      const newBoard = [...board];
-      newBoard[index] = gameState.playerSymbol;
-      setBoard(newBoard);
-      setGameState(prev => ({
-        ...prev,
-        board: newBoard,
-        isMyTurn: false,
-        gameStatus: "Waiting for opponent's move..."
-      }));
-      socket.emit("makeMove", { gameType: 'tictactoe', roomId, board: newBoard });
-    }
+    return false;
   }
 
-  function joinRoom(roomId: string) {
-    if (!roomId.trim()) {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: "Please enter a room ID"
-      }));
-      return;
+  function getCellState(board: ConnectFourCell[], idx: number, col: number, columns: number, rows: number): ConnectFourCell {
+    if (board[idx] === 'valid') {
+      return isLowestEmptyCellInColumn(board, idx, col, columns, rows) ? 'valid' : 'invalid';
     }
-    setGameState(prev => ({
-      ...prev,
-      gameStatus: `Joining room: ${roomId}...`
-    }));
-    socket.emit("joinRoom", { gameType: 'tictactoe', roomId });
+    return board[idx];
   }
 
-  function playAgain(roomId: string) {
-    setGameState(prev => ({
-      ...prev,
-      gameFinished: prev.rematchStatus === "pending",
-      gameStatus: "Requesting rematch..."
-    }));
+  function computeCellStates(board: ConnectFourCell[], columns: number, rows: number): ConnectFourCell[] {
+    const cellStates: ConnectFourCell[] = Array.from(board);
     
-    socket.emit("playAgain", { gameType: 'tictactoe', roomId });
+    for (let col = 0; col < columns; col++) {
+      for (let row = 0; row < rows; row++) {
+        const idx = row * columns + col;
+        cellStates[idx] = getCellState(board, idx, col, columns, rows);
+      }
+    }
+    
+    return cellStates;
   }
 
-  function resetBoard() {
-    setBoard(Array(boardGrid.columns * boardGrid.rows).fill(null));
+  const cellStates = computeCellStates(board, columns, rows);
+
+  function handleCellClick(i: number) {
+    if (cellStates[i] !== 'valid') return;
+    const newBoard = [...board];
+    newBoard[i] = currentPlayer;
+    setBoard(newBoard);
+    setCurrentPlayer(currentPlayer === 'yellow' ? 'red' : 'yellow');
   }
 
   return {
-    ...gameState,
-    makeMove,
+    cellStates,
+    currentPlayer,
+    handleCellClick,
+    columns,
+    rows,
     joinRoom,
     playAgain,
-    resetBoard,
-    boardGrid
+    roomState,
   };
-} 
+}

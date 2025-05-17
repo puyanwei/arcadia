@@ -1,45 +1,32 @@
-import { useEffect, useState } from 'react';
-import socket from '../utils/socket';
+import { useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { GameRoomEventHandlerMap, GameRoomEventName } from './useGameRoom';
 
 export function useSocket() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    if (!socket) return; // Guard against server-side rendering
-
-    function onConnect() {
-      setIsConnected(true);
-      setConnectionError(null);
-      console.log('Connected to server');
-    }
-
-    function onDisconnect() {
-      setIsConnected(false);
-      console.log('Disconnected from server');
-    }
-
-    function onError(error: Error) {
-      setConnectionError(error.message);
-      console.error('Socket error:', error);
-    }
-
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on('error', onError);
-    socket.on('connect_error', onError);
-
-    // Connect when component mounts
-    socket.connect();
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001');
+    socketRef.current = socket;
 
     return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('error', onError);
-      socket.off('connect_error', onError);
       socket.disconnect();
     };
   }, []);
 
-  return { isConnected, connectionError, socket };
+  const socket = socketRef.current;
+
+  function on<K extends GameRoomEventName>(event: K, handler: GameRoomEventHandlerMap[K]) {
+    socket?.on(event as string, handler as (...args: any[]) => void);
+  }
+
+  function off<K extends GameRoomEventName>(event: K, handler: GameRoomEventHandlerMap[K]) {
+    socket?.off(event as string, handler as (...args: any[]) => void);
+  }
+
+  return {
+    socket,
+    on,
+    off,
+  };
 } 

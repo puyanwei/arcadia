@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useConnectFour, ConnectFourCell } from "./useConnectFour";
 
-import { useConnectFour } from "./useConnectFour";
 export default function ConnectFour() {
-    const { board, boardGrid } = useConnectFour();
-    const [gameStatus] = useState("Enter a room ID to start"); // Placeholder for now
- 
+    const { cellStates, currentPlayer, handleCellClick, columns, rows, roomState } = useConnectFour();
+
+    function getCellClassName(cell: ConnectFourCell) {
+        const base = "w-16 h-16 flex items-center justify-center text-2xl border border-gray-400 rounded-full text-shadow-2xl";
+        const valid = "bg-gray-500 hover:bg-gray-400 cursor-pointer";
+        const yellow = "bg-yellow-200 text-black";
+        const red = "bg-red-300 text-white";
+        const invalid = "bg-gray-300 text-gray-400 cursor-not-allowed";
+        if (cell === 'valid') return `${base} ${valid}`;
+        if (cell === 'yellow') return `${base} ${yellow}`;
+        if (cell === 'red') return `${base} ${red}`;
+        if (cell === 'invalid') return `${base} ${invalid}`;
+    }
 
     return (
         <div className="flex flex-col items-center p-5 text-white min-h-screen">
@@ -12,27 +21,27 @@ export default function ConnectFour() {
 
             {/* Status area */}
             <div className="mb-4 text-center text-white">
-                {gameStatus}
+                {roomState.gameStatus}
             </div>
 
-            {/* Player info placeholder */}
+            {/* Player info */}
             <div className="mb-4 text-center">
-                <span className="px-3 py-1 rounded bg-gray-600">Player info</span>
+                <span className="px-3 py-1 rounded bg-gray-600">Current player: {currentPlayer}</span>
             </div>
 
             {/* Board grid (dynamic columns) */}
             <div
                 className={`grid gap-4 p-4 bg-blue-700 rounded`}
-                style={{ gridTemplateColumns: `repeat(${boardGrid.columns}, minmax(0, 1fr))` }}
+                style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
             >
-                {board.map((cell, i) => (
+                {cellStates.map((cell, i) => (
                     <button
                         key={i}
-                        className={`w-16 h-16 flex items-center justify-center text-2xl border border-gray-400 rounded-full text-shadow-2xl
-                          ${!cell ? 'bg-gray-500 hover:bg-gray-400' : cell === 'Red' ? 'bg-red-300 text-white' : 'bg-yellow-200 text-black'}`}
-                        disabled={!!cell}
+                        className={getCellClassName(cell)}
+                        disabled={cell !== 'valid'}
+                        onClick={() => handleCellClick(i)}
                     >
-                        {cell || ''}
+                        {cell === 'yellow' ? '●' : cell === 'red' ? '●' : ''}
                     </button>
                 ))}
             </div>

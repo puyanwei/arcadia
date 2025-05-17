@@ -1,36 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useTicTacToeGameStore } from '@/store/game';
 import { useSocket } from '@/hooks/useSocket';
-import { GameState, GameActions, Board, RematchStatus } from './types';
-
-type SocketEvent = 
-  | "updateBoard"
-  | "playerSymbol"
-  | "playerJoined"
-  | "gameStart"
-  | "roomFull"
-  | "error"
-  | "playerLeft"
-  | "gameEnd"
-  | "rematchState";
-
-const socketEvents: SocketEvent[] = [
-  "updateBoard",
-  "playerSymbol",
-  "playerJoined",
-  "gameStart",
-  "roomFull",
-  "error",
-  "playerLeft",
-  "gameEnd",
-  "rematchState"
-] as const;
+import { useGameRoom } from '@/hooks/useGameRoom';
+import { GameState, GameActions, Board } from './types';
 
 type PlayerSymbol = "X" | "O";
 
-export function useTicTacToe(): GameState & GameActions {
-  const { socket } = useSocket();
+export function useTicTacToe(): GameState & GameActions & { roomState: any } {
+  const { socket, on, off } = useSocket();
   const { board, setBoard } = useTicTacToeGameStore();
+  const { roomState, joinRoom, playAgain } = useGameRoom('tictactoe');
   const [gameState, setGameState] = useState<GameState>({
     board: Array(9).fill(null),
     playerSymbol: null,
@@ -43,8 +22,7 @@ export function useTicTacToe(): GameState & GameActions {
   });
 
   useEffect(() => {
-    socket.on("updateBoard", (newBoard: Board) => {
-      console.log('Board updated:', newBoard);
+    const handleUpdateBoard = (newBoard: Board) => {
       setBoard(newBoard);
       setGameState(prev => {
         if (prev.gameFinished) {
@@ -53,7 +31,6 @@ export function useTicTacToe(): GameState & GameActions {
             board: newBoard
           };
         }
-        
         return {
           ...prev,
           board: newBoard,
@@ -61,68 +38,18 @@ export function useTicTacToe(): GameState & GameActions {
           gameStatus: "Your turn!"
         };
       });
-    });
+    };
 
-    socket.on("playerSymbol", (symbol: PlayerSymbol) => {
+    const handlePlayerSymbol = (symbol: PlayerSymbol) => {
       setGameState(prev => ({
         ...prev,
         playerSymbol: symbol,
         isMyTurn: symbol === "X",
         gameStatus: `You are player ${symbol}. ${symbol === "X" ? "It's your turn!" : "Waiting for X to move..."}`
       }));
-    });
+    };
 
-    socket.on("playerJoined", (playerCount: number) => {
-      setGameState(prev => ({
-        ...prev,
-        playersInRoom: playerCount,
-        gameStatus: `Players in room: ${playerCount}/2 ${playerCount === 1 ? "- Waiting for opponent..." : ""}`
-      }));
-    });
-
-    socket.on("gameStart", (shouldSwapFirst: boolean) => {
-      setGameState(prev => {
-        const isX = prev.playerSymbol === "X";
-        const goesFirst = shouldSwapFirst ? !isX : isX;
-        
-        return {
-          ...prev,
-          gameStarted: true,
-          gameFinished: false,
-          rematchStatus: null,
-          isMyTurn: goesFirst,
-          gameStatus: goesFirst ? 
-            `Game started! Your turn (${prev.playerSymbol})` : 
-            `Game started! Waiting for opponent's move...`
-        };
-      });
-      setBoard(Array(9).fill(null));
-    });
-
-    socket.on("roomFull", () => {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: "Room is full! Try another room ID"
-      }));
-    });
-
-    socket.on("error", (message: string) => {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: `Error: ${message}`
-      }));
-    });
-
-    socket.on("playerLeft", (message: string) => {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: message,
-        gameStarted: false,
-        playersInRoom: prev.playersInRoom - 1
-      }));
-    });
-
-    socket.on("gameEnd", ({ winner, message }: { winner: string, message: string }) => {
+    const handleGameEnd = ({ winner, message }: { winner: string, message: string }) => {
       setGameState(prev => ({
         ...prev,
         gameStarted: false,
@@ -131,19 +58,18 @@ export function useTicTacToe(): GameState & GameActions {
         isMyTurn: false,
         board: prev.board
       }));
-      console.log('Game ended:', { winner, message });
-    });
+    };
 
-    socket.on("rematchState", ({ status, message }: { status: RematchStatus, message: string }) => {
-      setGameState(prev => ({
-        ...prev,
-        rematchStatus: status,
-        gameStatus: message
-      }));
-    });
+    on("updateBoard", handleUpdateBoard);
+    on("playerSymbol", handlePlayerSymbol);
+    on("gameEnd", handleGameEnd);
 
-    return () => socketEvents.forEach(event => socket.off(event));
-  }, [socket, setBoard]);
+    return () => {
+      off("updateBoard", handleUpdateBoard);
+      off("playerSymbol", handlePlayerSymbol);
+      off("gameEnd", handleGameEnd);
+    };
+  }, [on, off, setBoard]);
 
   function makeMove(index: number, roomId: string) {
     if (!gameState.gameStarted) {
@@ -153,7 +79,6 @@ export function useTicTacToe(): GameState & GameActions {
       }));
       return;
     }
-
     if (!board[index] && gameState.isMyTurn && gameState.playerSymbol) {
       const newBoard = [...board];
       newBoard[index] = gameState.playerSymbol;
@@ -164,39 +89,15 @@ export function useTicTacToe(): GameState & GameActions {
         isMyTurn: false,
         gameStatus: "Waiting for opponent's move..."
       }));
-      socket.emit("makeMove", { gameType: 'tictactoe', roomId, board: newBoard });
+      socket?.emit("makeMove", { gameType: 'tictactoe', roomId, board: newBoard });
     }
-  }
-
-  function joinRoom(roomId: string) {
-    if (!roomId.trim()) {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: "Please enter a room ID"
-      }));
-      return;
-    }
-    setGameState(prev => ({
-      ...prev,
-      gameStatus: `Joining room: ${roomId}...`
-    }));
-    socket.emit("joinRoom", { gameType: 'tictactoe', roomId });
-  }
-
-  function playAgain(roomId: string) {
-    setGameState(prev => ({
-      ...prev,
-      gameFinished: prev.rematchStatus === "pending",
-      gameStatus: "Requesting rematch..."
-    }));
-    
-    socket.emit("playAgain", { gameType: 'tictactoe', roomId });
   }
 
   return {
     ...gameState,
     makeMove,
     joinRoom,
-    playAgain
+    playAgain,
+    roomState
   };
 } 
