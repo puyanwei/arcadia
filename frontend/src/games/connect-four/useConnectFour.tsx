@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useTicTacToeGameStore } from '@/store/game';
+import { useConnectFourGameStore, Grid } from '@/store/game';
 import { useSocket } from '@/hooks/useSocket';
-import { GameState, GameActions, Board, RematchStatus } from './types';
+import { GameState, GameActions, RematchStatus } from './types';
+import { Board } from '@/types/game';
 
 type SocketEvent = 
   | "updateBoard"
@@ -26,13 +27,18 @@ const socketEvents: SocketEvent[] = [
   "rematchState"
 ] as const;
 
-type PlayerSymbol = "X" | "O";
+type PlayerSymbol = "Red" | "Yellow";
 
-export function useTicTacToe(): GameState & GameActions {
+type UseConnectFourReturn = GameActions & GameState & {
+  resetBoard: () => void;
+  boardGrid: Grid;
+};
+
+export function useConnectFour(): UseConnectFourReturn {
   const { socket } = useSocket();
-  const { board, setBoard } = useTicTacToeGameStore();
+  const { board, setBoard, boardGrid } = useConnectFourGameStore();
   const [gameState, setGameState] = useState<GameState>({
-    board: Array(9).fill(null),
+    board: Array(boardGrid.columns * boardGrid.rows).fill(null),
     playerSymbol: null,
     isMyTurn: false,
     playersInRoom: 0,
@@ -67,8 +73,8 @@ export function useTicTacToe(): GameState & GameActions {
       setGameState(prev => ({
         ...prev,
         playerSymbol: symbol,
-        isMyTurn: symbol === "X",
-        gameStatus: `You are player ${symbol}. ${symbol === "X" ? "It's your turn!" : "Waiting for X to move..."}`
+        isMyTurn: symbol === "Red",
+        gameStatus: `You are player ${symbol}. ${symbol === "Red" ? "It's your turn!" : "Waiting for Red to move..."}`
       }));
     });
 
@@ -96,7 +102,7 @@ export function useTicTacToe(): GameState & GameActions {
             `Game started! Waiting for opponent's move...`
         };
       });
-      setBoard(Array(9).fill(null));
+      setBoard(Array(boardGrid.columns * boardGrid.rows).fill(null));
     });
 
     socket.on("roomFull", () => {
@@ -193,10 +199,16 @@ export function useTicTacToe(): GameState & GameActions {
     socket.emit("playAgain", { gameType: 'tictactoe', roomId });
   }
 
+  function resetBoard() {
+    setBoard(Array(boardGrid.columns * boardGrid.rows).fill(null));
+  }
+
   return {
     ...gameState,
     makeMove,
     joinRoom,
-    playAgain
+    playAgain,
+    resetBoard,
+    boardGrid
   };
 } 

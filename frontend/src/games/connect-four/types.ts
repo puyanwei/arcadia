@@ -1,8 +1,4 @@
-export type PlayerSymbol = "X" | "O" | null;
-export type Cell = (string | null)
-export type Board = Cell[]
-
-export type RematchStatus = "waiting" | "pending" | null;
+import { Board } from '@/types/game';
 
 export type GameState = {
   board: Board;
@@ -19,4 +15,6 @@ export type GameActions = {
   makeMove: (index: number, roomId: string) => void;
   joinRoom: (roomId: string) => void;
   playAgain: (roomId: string) => void;
-}; 
+};
+
+export type RematchStatus = "pending" | "accepted" | "rejected" | null; 

@@ -2,12 +2,12 @@
 
 import { useParams } from 'next/navigation';
 import TicTacToe from '@/games/tictactoe/TicTacToe';
-
+import ConnectFour from '@/games/connect-four/ConnectFour';
 type GameComponents = Record<string, React.ComponentType>;
 
 const gameComponents: GameComponents = {
   tictactoe: TicTacToe,
-  // Add more games here as you create them
+  'connect-four': ConnectFour,
 };
 
 export default function GamePage() {
