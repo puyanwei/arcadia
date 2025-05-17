@@ -1,15 +1,15 @@
-export type Board = (string | null)[];
+export type RematchStatus = 'pending' | 'accepted' | 'rejected' | null;
 
-export type RematchStatus = "waiting" | "pending" | null;
+export type Board = (string | null)[];
 
 export type GameState = {
   board: Board;
   playerSymbol: string | null;
   isMyTurn: boolean;
+  playersInRoom: number;
   gameStarted: boolean;
   gameFinished: boolean;
   gameStatus: string;
-  playersInRoom: number;
   rematchStatus: RematchStatus;
 };
 

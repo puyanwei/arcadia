@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useTicTacToeGameStore } from '@/store/game';
 import { useSocket } from '@/hooks/useSocket';
-import { useGameRoom } from '@/hooks/useGameRoom';
+import { GameRoomState, useGameRoom } from '@/hooks/useGameRoom';
 import { GameState, GameActions, Board } from './types';
 
 type PlayerSymbol = "X" | "O";
+type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & { isConnected: boolean, connectionError: string | null };
 
-export function useTicTacToe(): GameState & GameActions & { roomState: any } {
-  const { socket, on, off } = useSocket();
+export function useTicTacToe(): UseTicTacToeReturnType {
+  const { socket, on, off, isConnected, connectionError } = useSocket();
   const { board, setBoard } = useTicTacToeGameStore();
   const { roomState, joinRoom, playAgain } = useGameRoom('tictactoe');
   const [gameState, setGameState] = useState<GameState>({
@@ -95,9 +96,11 @@ export function useTicTacToe(): GameState & GameActions & { roomState: any } {
 
   return {
     ...gameState,
+    ...roomState,
     makeMove,
     joinRoom,
     playAgain,
-    roomState
+    isConnected,
+    connectionError
   };
 } 

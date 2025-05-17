@@ -5,7 +5,6 @@ import { useSocket } from "@/hooks/useSocket";
 import { useTicTacToe } from "./useTicTacToe";
 
 export default function TicTacToe() {
-  const { isConnected, connectionError } = useSocket();
   const {
     playerSymbol,
     isMyTurn,
@@ -16,7 +15,9 @@ export default function TicTacToe() {
     makeMove,
     joinRoom,
     playAgain,
-    rematchStatus
+    rematchStatus,
+    isConnected,
+    connectionError
   } = useTicTacToe();
   
   const [roomId, setRoomId] = useState("");
@@ -96,8 +97,8 @@ export default function TicTacToe() {
           onClick={handlePlayAgain}
           className="mt-4 p-2 bg-green-600 hover:bg-green-700 text-white rounded w-64"
         >
-          {rematchStatus === "waiting" ? "Waiting for opponent..." :
-           rematchStatus === "pending" ? "Accept Rematch" :
+          {rematchStatus === "pending" ? "Accept Rematch" :
+           rematchStatus === "accepted" ? "Waiting for opponent..." :
            "Rematch"}
         </button>
       )}
