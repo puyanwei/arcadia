@@ -88,9 +88,12 @@ type SocketHandlerParams = {
   gameHandlers: Record<string, GameHandler>;
   emitGameState?: Function;
   rematchStates?: Map<string, RematchState>;
+  data?: SocketHandlerData;
 };
 
-function onJoinRoom({ data, socket, io, gameStates, gameHandlers, emitGameState }: SocketHandlerParams & { data: { gameType: string, roomId: string } }) {
+type SocketHandlerData = { gameType: string, roomId: string, board?: any };
+
+function onJoinRoom({ data, socket, io, gameStates, gameHandlers, emitGameState }: SocketHandlerParams) {
   const { gameType, roomId } = data;
   if (!validateGameType(gameType)) {
     socket.emit("error", "Invalid game type");
@@ -116,7 +119,7 @@ function onJoinRoom({ data, socket, io, gameStates, gameHandlers, emitGameState 
   }
 }
 
-function onPlayAgain({ data, socket, io, gameStates, gameHandlers, rematchStates }: SocketHandlerParams & { data: { gameType: string, roomId: string } }) {
+function onPlayAgain({ data, socket, io, gameStates, gameHandlers, rematchStates }: SocketHandlerParams) {
   const { gameType, roomId } = data;
   const handler = gameHandlers[gameType];
   const gameState = gameStates.get(gameType)!;
@@ -139,7 +142,7 @@ function onPlayAgain({ data, socket, io, gameStates, gameHandlers, rematchStates
   }
 }
 
-function onMakeMove({ data, socket, io, gameStates, gameHandlers }: SocketHandlerParams & { data: { gameType: string, roomId: string, board: any } }) {
+function onMakeMove({ data, socket, io, gameStates, gameHandlers }: SocketHandlerParams) {
   const { gameType, roomId, board } = data;
   const room = getPlayerRoom(gameStates.get(gameType)!, socket.id);
   if (!room || room.id !== roomId) {
