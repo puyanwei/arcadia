@@ -19,4 +19,11 @@ export type GameActions = {
   makeMove: (index: number, roomId: string) => void;
   joinRoom: (roomId: string) => void;
   playAgain: (roomId: string) => void;
+};
+
+export type GameType = 'tictactoe' | 'connect-four';
+
+export type Grid = {
+  columns: number;
+  rows: number;
 }; 

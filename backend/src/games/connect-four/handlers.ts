@@ -1,6 +1,6 @@
 import { GameHandler, GameState, GameRoom } from '../index';
 import { Server, Socket } from 'socket.io';
-import { checkWinner, isBoardFull, getLowestEmptyCellInColumn } from './state';
+import { checkWinner, getLowestEmptyCellInColumn, assignPlayerSymbol, getPlayerSymbol } from './state';
 import { RematchState } from '../tictactoe/types';
 import { ConnectFourCell, ConnectFourBoard, ConnectFourPlayerSymbol } from './types';
 
@@ -20,6 +20,7 @@ export const handleJoinRoom = (gameState: GameState<ConnectFourPlayerSymbol>, ro
 
   room.players.push(playerId);
   gameState.rooms.set(roomId, room);
+  assignPlayerSymbol(gameState, room, playerId);
   return gameState;
 };
 
@@ -27,6 +28,15 @@ export const handleMakeMove = (gameState: GameState<ConnectFourPlayerSymbol>, ro
   const room = gameState.rooms.get(roomId);
   if (!room) throw new Error('Room not found');
   
+  // Validate board
+  if (!Array.isArray(move.board) || move.board.length !== 42) {
+    throw new Error('Invalid board state');
+  }
+  
+  if (!move.board.every(cell => cell === 'yellow' || cell === 'red' || cell === 'valid' || cell === 'invalid')) {
+    throw new Error('Invalid board values');
+  }
+
   room.board = move.board;
   return gameState;
 };
@@ -80,20 +90,15 @@ export const handleDisconnect = (gameState: GameState<ConnectFourPlayerSymbol>, 
   if (room.players.length === 0) {
     gameState.rooms.delete(roomId);
   }
+  gameState.playerSymbols.delete(playerId);
   return gameState;
 };
 
-export const createInitialState = (): GameState<ConnectFourPlayerSymbol> => ({
-  rooms: new Map<string, GameRoom>(),
-  playerSymbols: new Map<string, ConnectFourPlayerSymbol>()
-});
-
-export const getPlayerSymbol = (gameState: GameState<ConnectFourPlayerSymbol>, playerId: string): ConnectFourPlayerSymbol | null => {
-  return gameState.playerSymbols.get(playerId) || null;
-};
-
 export const connectFourHandler: GameHandler<ConnectFourPlayerSymbol> = {
-  createInitialState,
+  createInitialState: () => ({
+    rooms: new Map<string, GameRoom>(),
+    playerSymbols: new Map<string, ConnectFourPlayerSymbol>()
+  }),
   handleJoinRoom,
   handleMakeMove,
   handlePlayAgain,

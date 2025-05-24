@@ -1,54 +1,119 @@
-import { ConnectFourCell } from "./types";
-import { useConnectFour } from "./useConnectFour";
+import { useState } from 'react';
+import { useConnectFour } from './useConnectFour';
+import { ConnectFourCell } from './types';
 
 export default function ConnectFour() {
-    const { cellStates, currentPlayer, handleCellClick, columns, rows, roomState } = useConnectFour();
+  const {
+    playerSymbol,
+    isMyTurn,
+    gameStarted,
+    gameFinished,
+    gameStatus,
+    board,
+    makeMove,
+    joinRoom,
+    playAgain,
+    rematchStatus,
+    isConnected,
+    connectionError
+  } = useConnectFour();
+  
+  const [roomId, setRoomId] = useState("");
 
-    function getCellClassName(cell: ConnectFourCell) {
-        const base = "w-16 h-16 flex items-center justify-center text-2xl border border-gray-400 rounded-full text-shadow-2xl";
-        const valid = "bg-gray-500 hover:bg-gray-400 cursor-pointer";
-        const yellow = "bg-yellow-200 text-black";
-        const red = "bg-red-300 text-white";
-        const invalid = "bg-gray-300 text-gray-400 cursor-not-allowed";
-        if (cell === 'valid') return `${base} ${valid}`;
-        if (cell === 'yellow') return `${base} ${yellow}`;
-        if (cell === 'red') return `${base} ${red}`;
-        if (cell === 'invalid') return `${base} ${invalid}`;
-    }
+  function handleJoinRoom() {
+    if (!isConnected) return;
+    joinRoom(roomId);
+  }
 
-    return (
-        <div className="flex flex-col items-center p-5 text-white min-h-screen">
-            <h1 className="text-xl font-bold mb-4 text-white">Connect Four</h1>
+  function handlePlayAgain() {
+    if (!isConnected) return;
+    playAgain(roomId);
+  }
 
-            {/* Status area */}
-            <div className="mb-4 text-center text-white">
-                {roomState.gameStatus}
-            </div>
+  function getCellClassName(cell: ConnectFourCell) {
+    const base = "w-16 h-16 flex items-center justify-center text-2xl border border-gray-400 rounded-full text-shadow-2xl";
+    const valid = "bg-gray-500 hover:bg-gray-400 cursor-pointer";
+    const yellow = "bg-yellow-200 text-black";
+    const red = "bg-red-300 text-white";
+    const invalid = "bg-gray-300 text-gray-400 cursor-not-allowed";
+    if (cell === 'valid') return `${base} ${valid}`;
+    if (cell === 'yellow') return `${base} ${yellow}`;
+    if (cell === 'red') return `${base} ${red}`;
+    if (cell === 'invalid') return `${base} ${invalid}`;
+  }
 
-            {/* Player info */}
-            <div className="mb-4 text-center">
-                <span className="px-3 py-1 rounded bg-gray-600">Current player: {currentPlayer}</span>
-            </div>
+  return (
+    <div className="flex flex-col items-center p-5 text-white min-h-screen">
+      <h1 className="text-xl font-bold mb-4 text-white">Connect Four</h1>
 
-            {/* Board grid (dynamic columns) */}
-            <div
-                className={`grid gap-4 p-4 bg-blue-700 rounded`}
-                style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-            >
-                {cellStates.map((cell, i) => {
-                    const cellClassName = getCellClassName(cell);
-                    return (
-                        <button
-                            key={i}
-                            className={cellClassName}
-                            disabled={cell !== 'valid'}
-                            onClick={() => handleCellClick(i)}
-                    >
-                        {cell === 'yellow' ? '●' : cell === 'red' ? '●' : ''}
-                    </button>
-                    );
-                })}
-            </div>
+      <div className={`mb-4 ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
+        {isConnected ? 'Connected to server' : 'Disconnected from server'}
+      </div>
+
+      {connectionError && (
+        <div className="mb-4 text-red-400">
+          Connection error: {connectionError}
         </div>
-    );
+      )}
+
+      {!playerSymbol && (
+        <>
+          <input
+            className="border p-2 my-2 w-64 bg-gray-800 text-white border-gray-600"
+            placeholder="Enter Room ID"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            disabled={!isConnected}
+          />
+          <button 
+            onClick={handleJoinRoom} 
+            className={`p-2 ${isConnected ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'} text-white rounded w-64 mb-4`}
+            disabled={!isConnected}
+          >
+            {isConnected ? 'Join Game' : 'Connecting...'}
+          </button>
+        </>
+      )}
+
+      <div className="mb-4 text-center text-white">
+        {gameStatus}
+      </div>
+
+      {playerSymbol && (
+        <div className="mb-4 text-center">
+          <span className={`px-3 py-1 rounded ${playerSymbol === 'yellow' ? 'bg-yellow-600' : 'bg-red-600'}`}>
+            You are {playerSymbol}
+          </span>
+        </div>
+      )}
+
+      <div className={`grid gap-4 p-4 bg-blue-700 rounded ${!gameStarted && 'opacity-50'}`}
+        style={{ gridTemplateColumns: `repeat(7, minmax(0, 1fr))` }}>
+        {board.map((cell, i) => {
+          const cellClassName = getCellClassName(cell);
+          return (
+            <button
+              key={i}
+              className={cellClassName}
+              disabled={cell !== 'valid' || !isMyTurn || !gameStarted}
+              onClick={() => makeMove(i, roomId)}
+            >
+              {cell === 'yellow' ? '●' : cell === 'red' ? '●' : ''}
+            </button>
+          );
+        })}
+      </div>
+
+      {gameFinished && (
+        <button
+          onClick={handlePlayAgain}
+          className="mt-4 p-2 bg-green-600 hover:bg-green-700 text-white rounded w-64"
+        >
+          {rematchStatus === "pending" ? "Accept Rematch" :
+           rematchStatus === "accepted" ? "Waiting for opponent..." :
+           "Rematch"}
+        </button>
+      )}
+    </div>
+  );
 }

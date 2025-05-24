@@ -1,8 +1,10 @@
 import { Board } from '@/types/game';
 
+export type ConnectFourCell = 'yellow' | 'red' | 'invalid' | 'valid';
+
 export type GameState = {
-  board: Board;
-  playerSymbol: string | null;
+  board: ConnectFourCell[];
+  playerSymbol: 'yellow' | 'red' | null;
   isMyTurn: boolean;
   gameStarted: boolean;
   gameFinished: boolean;
@@ -18,5 +20,3 @@ export type GameActions = {
 };
 
 export type RematchStatus = "pending" | "accepted" | "rejected" | null; 
-
-export type ConnectFourCell = 'yellow' | 'red' | 'invalid' | 'valid';

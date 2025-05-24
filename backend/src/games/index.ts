@@ -1,27 +1,28 @@
 import { Server, Socket } from 'socket.io';
 import { 
-  handleJoinRoom,
-  handleMakeMove,
-  handlePlayAgain,
-  handleRematch,
-  handleDisconnect
+  handleJoinRoom as ticTacToeJoinRoom,
+  handleMakeMove as ticTacToeMakeMove,
+  handlePlayAgain as ticTacToePlayAgain,
+  handleRematch as ticTacToeRematch,
+  handleDisconnect as ticTacToeDisconnect
 } from './tictactoe/handlers';
 import {
-  createInitialState,
-  checkWinner,
-  getPlayerSymbol
+  createInitialState as ticTacToeCreateInitialState,
+  checkWinner as ticTacToeCheckWinner,
+  getPlayerSymbol as ticTacToeGetPlayerSymbol
 } from './tictactoe/state';
 import { Board, RematchState, PlayerSymbol } from './tictactoe/types';
-
-export interface GameState<T = PlayerSymbol> {
-  rooms: Map<string, GameRoom>;
-  playerSymbols: Map<string, T>;
-}
+import { connectFourHandler } from './connect-four/handlers';
 
 export interface GameRoom {
   id: string;
   players: string[];
   board: Board;
+}
+
+export interface GameState<T = PlayerSymbol> {
+  rooms: Map<string, GameRoom>;
+  playerSymbols: Map<string, T>;
 }
 
 export interface GameHandler<T = PlayerSymbol> {
@@ -42,18 +43,18 @@ export interface GameHandler<T = PlayerSymbol> {
   handleDisconnect(gameState: GameState<T>, roomId: string, playerId: string): GameState<T>;
 }
 
-export const gameHandlers: Record<string, GameHandler> = {
+export const gameHandlers: Record<string, GameHandler<any>> = {
   tictactoe: {
-    createInitialState,
-    handleJoinRoom,
-    handleMakeMove,
-    handlePlayAgain,
-    checkWinner,
-    getPlayerSymbol,
-    handleRematch,
-    handleDisconnect
+    createInitialState: ticTacToeCreateInitialState,
+    handleJoinRoom: ticTacToeJoinRoom,
+    handleMakeMove: ticTacToeMakeMove,
+    handlePlayAgain: ticTacToePlayAgain,
+    checkWinner: ticTacToeCheckWinner,
+    getPlayerSymbol: ticTacToeGetPlayerSymbol,
+    handleRematch: ticTacToeRematch,
+    handleDisconnect: ticTacToeDisconnect
   },
-  // Add more games here as you create them
+  'connect-four': connectFourHandler
 };
 
 export type GameType = keyof typeof gameHandlers; 

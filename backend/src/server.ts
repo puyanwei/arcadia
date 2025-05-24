@@ -44,6 +44,7 @@ const DEV = process.env.NODE_ENV === 'development';
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 // Initialize game states and rematch states
 const gameStates = new Map(
@@ -57,7 +58,10 @@ const rematchStates = new Map<string, RematchState>();
 app.get('/', (req, res) => {
   res.json({ 
     status: 'Server is running',
-    rooms: gameStates.get('tictactoe')?.rooms.size || 0
+    rooms: {
+      tictactoe: gameStates.get('tictactoe')?.rooms.size || 0,
+      'connect-four': gameStates.get('connect-four')?.rooms.size || 0
+    }
   });
 });
 
@@ -78,8 +82,13 @@ const io = new Server(httpServer, {
 });
 
 function getGameTypeFromRoom(roomId: string): GameType {
-  // For now hardcoded to tictactoe, but this should be stored with the room
-  return 'tictactoe';
+  // Check each game state to find the room
+  for (const [gameType, gameState] of gameStates.entries()) {
+    if (gameState.rooms.has(roomId)) {
+      return gameType as GameType;
+    }
+  }
+  return 'tictactoe'; // Default to tictactoe if room not found
 }
 
 function validateGameType(gameType: string): gameType is GameType {
@@ -184,20 +193,23 @@ io.on("connection", (socket: Socket) => {
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
     
-    const room = getPlayerRoom(gameStates.get('tictactoe')!, socket.id);
-    if (room) {
-      const gameType = getGameTypeFromRoom(room.id);
-      rematchStates.delete(room.id);
-      
-      const handler = gameHandlers[gameType];
-      if (handler) {
-        const newGameState = handler.handleDisconnect(gameStates.get(gameType)!, room.id, socket.id);
-        gameStates.set(gameType, newGameState);
+    // Check all game states for the disconnected player
+    for (const [gameType, gameState] of gameStates.entries()) {
+      const room = getPlayerRoom(gameState, socket.id);
+      if (room) {
+        rematchStates.delete(room.id);
         
-        if (gameStates.get(gameType)!.rooms.has(room.id)) {
-          io.to(room.id).emit("playerLeft", "Opponent left the game");
-          io.to(room.id).emit("gameEnd", { winner: 'disconnect', message: "Opponent left the game" });
+        const handler = gameHandlers[gameType];
+        if (handler) {
+          const newGameState = handler.handleDisconnect(gameState, room.id, socket.id);
+          gameStates.set(gameType, newGameState);
+          
+          if (gameStates.get(gameType)!.rooms.has(room.id)) {
+            io.to(room.id).emit("playerLeft", "Opponent left the game");
+            io.to(room.id).emit("gameEnd", { winner: 'disconnect', message: "Opponent left the game" });
+          }
         }
+        break; // Found the room, no need to check other game states
       }
     }
   });

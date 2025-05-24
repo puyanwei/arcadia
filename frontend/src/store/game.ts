@@ -3,9 +3,15 @@ import { Board } from '../types/game';
 
 type GameType = 'tictactoe' | 'connect-four';
 
-export const boardGrid: Record<GameType, Grid> = {
-  tictactoe: { columns: 3, rows: 3 },
-  'connect-four': { columns: 7, rows: 6 }
+export const boardGrid = {
+  tictactoe: {
+    columns: 3,
+    rows: 3
+  },
+  'connect-four': {
+    columns: 7,
+    rows: 6
+  }
 } as const;
 
 export type Grid = {
@@ -34,7 +40,7 @@ export const useTicTacToeGameStore = create<GridBoard>((set) => ({
 export const useConnectFourGameStore = create<GridBoard>((set) => ({
   board: createBoard(connectFourGrid.columns, connectFourGrid.rows),
   setBoard: (board) => set({ board }),
-  currentPlayer: 'Red',
+  currentPlayer: 'red',
   setCurrentPlayer: (player) => set({ currentPlayer: player }),
   boardGrid: connectFourGrid
 })); 
