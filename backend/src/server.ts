@@ -3,9 +3,9 @@ import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
-import { GameHandler, gameHandlers, GameState, GameType, getPlayerNumber } from './games/gameMapper';
-import { getPlayerRoom } from "./games/tictactoe/state";
+import { gameHandlers } from './games/gameMapper';
 import { RematchState } from './games/types';
+import { onDisconnect, onJoinRoom, onMakeMove, onPlayAgain } from "./games/shared-handlers";
 
 dotenv.config();
 
@@ -80,122 +80,6 @@ const io = new Server(httpServer, {
   transports: ['websocket', 'polling']
 })
 
-type SocketHandlerParams = {
-  socket: Socket;
-  io: Server;
-  gameStates: Map<string, GameState>;
-  gameHandlers: Record<string, GameHandler>;
-  emitGameState?: Function;
-  rematchStates?: Map<string, RematchState>;
-  data?: SocketHandlerData;
-};
-
-type SocketHandlerData = { gameType: GameType, roomId: string, board?: any };
-
-function onJoinRoom({ data, socket, io, gameStates, gameHandlers }: SocketHandlerParams) {
-  const { gameType, roomId } = data;
-  if (!validateGameType(gameType)) {
-    socket.emit("error", "Invalid game type");
-    return;
-  }
-  const handler = gameHandlers[gameType];
-  if (!handler) {
-    socket.emit("error", "Invalid game handler");
-    return;
-  }
-  try {
-    const gameState = gameStates.get(gameType)!;
-    const newGameState = handler.handleJoinRoom(gameState, roomId, socket.id);
-    gameStates.set(gameType, newGameState);
-    socket.join(roomId);
-    const playerNumber = getPlayerNumber(newGameState, socket.id);
-    if (playerNumber) {
-      socket.emit("playerNumber", playerNumber);
-    }
-  } catch (error) {
-    socket.emit("error", error.message);
-  }
-}
-
-function onPlayAgain({ data, socket, io, gameStates, gameHandlers, rematchStates }: SocketHandlerParams) {
-  const { gameType, roomId } = data;
-  const gameState = gameStates.get(gameType)!;
-  const room = gameState.rooms.get(roomId);
-  if (!room) return;
-  const currentRematchState = rematchStates?.get(roomId);
-  const { newGameState, newRematchState } = gameHandlers[gameType].handleRematch(
-    gameState,
-    roomId,
-    socket.id,
-    currentRematchState,
-    socket,
-    io
-  );
-  gameStates.set(gameType, newGameState);
-  if (newRematchState) {
-    rematchStates?.set(roomId, newRematchState);
-  } else {
-    rematchStates?.delete(roomId);
-  }
-}
-
-function onMakeMove({ data, socket, io, gameStates, gameHandlers }: SocketHandlerParams) {
-  const { gameType, roomId, board } = data;
-  const room = getPlayerRoom(gameStates.get(gameType)!, socket.id);
-  if (!room || room.id !== roomId) {
-    socket.emit("error", "You are not in this room");
-    return;
-  }
-  const handler = gameHandlers[gameType];
-  if (!handler) {
-    socket.emit("error", "Game handler not found");
-    return;
-  }
-  const newGameState = handler.handleMakeMove(gameStates.get(gameType)!, roomId, socket.id, { board });
-  gameStates.set(gameType, newGameState);
-  socket.to(roomId).emit("updateBoard", board);
-  // Check for win or draw
-  const result = handler.checkWinner(board);
-  if (result) {
-    if (result === 'draw') {
-      io.to(roomId).emit("gameEnd", { 
-        winner: 'draw', 
-        message: "Game ended in a draw!" 
-      });
-    } else {
-      const winnerPlayerNumber = result;
-      room.players.forEach(playerId => {
-        const playerNumber = getPlayerNumber(gameStates.get(gameType)!, playerId);
-        const isWinner = playerNumber === winnerPlayerNumber;
-        io.to(playerId).emit("gameEnd", {
-          winner: result,
-          message: isWinner ? "You won!" : "You lost!"
-        });
-      });
-    }
-  }
-}
-
-function onDisconnect({ socket, io, gameStates, gameHandlers, rematchStates }: SocketHandlerParams) {
-  console.log("User disconnected:", socket.id);
-  for (const [gameType, gameState] of gameStates.entries()) {
-    const room = getPlayerRoom(gameState, socket.id);
-    if (room) {
-      rematchStates?.delete(room.id);
-      const handler = gameHandlers[gameType];
-      if (handler) {
-        const newGameState = handler.handleDisconnect(gameState, room.id, socket.id);
-        gameStates.set(gameType, newGameState);
-        if (gameStates.get(gameType)!.rooms.has(room.id)) {
-          io.to(room.id).emit("playerLeft", "Opponent left the game");
-          io.to(room.id).emit("gameEnd", { winner: 'disconnect', message: "Opponent left the game" });
-        }
-      }
-      break;
-    }
-  }
-}
-
 io.on("connection", (socket: Socket) => {
   console.log("User connected:", socket.id);
   socket.on("joinRoom", (data) => onJoinRoom({ data, socket, io, gameStates, gameHandlers }));
@@ -203,10 +87,6 @@ io.on("connection", (socket: Socket) => {
   socket.on("makeMove", (data) => onMakeMove({ data, socket, io, gameStates, gameHandlers }));
   socket.on("disconnect", () => onDisconnect({ socket, io, gameStates, gameHandlers, rematchStates }));
 });
-
-function validateGameType(gameType: string): gameType is GameType {
-  return gameType in gameHandlers;
-}
 
 httpServer.listen(PORT, HOST, () => {
   console.log(`Server running on ${HOST}:${PORT}`);
