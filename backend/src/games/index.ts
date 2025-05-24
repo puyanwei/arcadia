@@ -9,9 +9,9 @@ import {
 import {
   createInitialState as ticTacToeCreateInitialState,
   checkWinner as ticTacToeCheckWinner,
-  getPlayerSymbol as ticTacToeGetPlayerSymbol
+  getPlayerNumber as ticTacToeGetPlayerNumber
 } from './tictactoe/state';
-import { Board, RematchState, PlayerSymbol } from './tictactoe/types';
+import { Board, RematchState, PlayerNumber } from './tictactoe/types';
 import { connectFourHandler } from './connect-four/handlers';
 
 export interface GameRoom {
@@ -25,13 +25,13 @@ export interface GameState<T = PlayerNumber> {
   playerNumbers: Map<string, T>;
 }
 
-export interface GameHandler<T = PlayerSymbol> {
+export interface GameHandler<T = PlayerNumber> {
   createInitialState(): GameState<T>;
   handleJoinRoom(gameState: GameState<T>, roomId: string, playerId: string): GameState<T>;
   handleMakeMove(gameState: GameState<T>, roomId: string, playerId: string, move: { board: Board }): GameState<T>;
   handlePlayAgain(gameState: GameState<T>, roomId: string, playerId: string): GameState<T>;
   checkWinner(board: Board): string | null;
-  getPlayerSymbol(gameState: GameState<T>, playerId: string): T | null;
+  getPlayerNumber(gameState: GameState<T>, playerId: string): T | null;
   handleRematch(
     gameState: GameState<T>, 
     roomId: string, 
@@ -50,7 +50,7 @@ export const gameHandlers: Record<string, GameHandler<any>> = {
     handleMakeMove: ticTacToeMakeMove,
     handlePlayAgain: ticTacToePlayAgain,
     checkWinner: ticTacToeCheckWinner,
-    getPlayerSymbol: ticTacToeGetPlayerSymbol,
+    getPlayerNumber: ticTacToeGetPlayerNumber,
     handleRematch: ticTacToeRematch,
     handleDisconnect: ticTacToeDisconnect
   },

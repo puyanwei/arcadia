@@ -116,7 +116,7 @@ io.on("connection", (socket: Socket) => {
       gameStates.set(gameType, newGameState);
       
       socket.join(roomId);
-      const symbol = handler.getPlayerSymbol(newGameState, socket.id);
+      const symbol = handler.getPlayerNumber(newGameState, socket.id);
       if (symbol) {
         socket.emit("playerSymbol", symbol);
       }
@@ -179,8 +179,8 @@ io.on("connection", (socket: Socket) => {
       } else {
         const winnerSymbol = result;
         room.players.forEach(playerId => {
-          const playerSymbol = handler.getPlayerSymbol(gameStates.get(gameType)!, playerId);
-          const isWinner = playerSymbol === winnerSymbol;
+          const playerNumber = handler.getPlayerNumber(gameStates.get(gameType)!, playerId);
+          const isWinner = playerNumber === winnerSymbol;
           io.to(playerId).emit("gameEnd", {
             winner: result,
             message: isWinner ? "You won!" : "You lost!"

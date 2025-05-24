@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSocket } from './useSocket';
 
 export type RematchStatus = 'pending' | 'accepted' | 'rejected' | null;
+export type PlayerNumber = 'player1' | 'player2';
 
 export type GameRoomState = {
   roomId: string;
@@ -17,7 +18,7 @@ export type RoomFullEventHandler = () => void;
 export type PlayerLeftEventHandler = (message: string) => void;
 export type RematchStateEventHandler = (payload: { status: RematchStatus; message: string }) => void;
 export type GameStartEventHandler = () => void;
-export type PlayerNumberEventHandler = (number: 'player1' | 'player2') => void;
+export type PlayerNumberEventHandler = (number: PlayerNumber) => void;
 
 // Event map
 export type GameRoomEventHandlerMap = {
@@ -27,7 +28,6 @@ export type GameRoomEventHandlerMap = {
   rematchState: RematchStateEventHandler;
   gameStart: GameStartEventHandler;
   updateBoard: (newBoard: any) => void;
-  playerSymbol: (symbol: "X" | "O" | "yellow" | "red") => void;
   gameEnd: (data: { winner: string; message: string }) => void;
   playerNumber: PlayerNumberEventHandler;
 };

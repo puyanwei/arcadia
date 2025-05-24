@@ -33,7 +33,7 @@ export const handleMakeMove = (gameState: GameState<PlayerNumber>, roomId: strin
     throw new Error('Invalid board state');
   }
   
-  if (!move.board.every(cell => cell === 'yellow' || cell === 'red' || cell === 'valid' || cell === 'invalid')) {
+  if (!move.board.every(cell => cell === 'player1' || cell === 'player2' || cell === 'valid' || cell === 'invalid')) {
     throw new Error('Invalid board values');
   }
 
