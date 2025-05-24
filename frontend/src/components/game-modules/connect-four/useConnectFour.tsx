@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { boardGrid } from '@/store/game';
 import { useGameRoom } from '@/hooks/useGameRoom';
-
-export type ConnectFourCell = 'yellow' | 'red' | 'invalid' | 'valid';
+import { ConnectFourCell } from './types';
 
 export function useConnectFour() {
   const columns = boardGrid['connect-four'].columns;

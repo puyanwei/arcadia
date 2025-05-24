@@ -18,3 +18,5 @@ export type GameActions = {
 };
 
 export type RematchStatus = "pending" | "accepted" | "rejected" | null; 
+
+export type ConnectFourCell = 'yellow' | 'red' | 'invalid' | 'valid';

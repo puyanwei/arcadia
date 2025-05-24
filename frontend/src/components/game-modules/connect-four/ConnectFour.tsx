@@ -1,4 +1,5 @@
-import { useConnectFour, ConnectFourCell } from "./useConnectFour";
+import { ConnectFourCell } from "./types";
+import { useConnectFour } from "./useConnectFour";
 
 export default function ConnectFour() {
     const { cellStates, currentPlayer, handleCellClick, columns, rows, roomState } = useConnectFour();
@@ -34,16 +35,19 @@ export default function ConnectFour() {
                 className={`grid gap-4 p-4 bg-blue-700 rounded`}
                 style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
             >
-                {cellStates.map((cell, i) => (
-                    <button
-                        key={i}
-                        className={getCellClassName(cell)}
-                        disabled={cell !== 'valid'}
-                        onClick={() => handleCellClick(i)}
+                {cellStates.map((cell, i) => {
+                    const cellClassName = getCellClassName(cell);
+                    return (
+                        <button
+                            key={i}
+                            className={cellClassName}
+                            disabled={cell !== 'valid'}
+                            onClick={() => handleCellClick(i)}
                     >
                         {cell === 'yellow' ? '●' : cell === 'red' ? '●' : ''}
                     </button>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );

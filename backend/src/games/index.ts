@@ -13,9 +13,9 @@ import {
 } from './tictactoe/state';
 import { Board, RematchState, PlayerSymbol } from './tictactoe/types';
 
-export interface GameState {
+export interface GameState<T = PlayerSymbol> {
   rooms: Map<string, GameRoom>;
-  playerSymbols: Map<string, PlayerSymbol>;
+  playerSymbols: Map<string, T>;
 }
 
 export interface GameRoom {
@@ -24,22 +24,22 @@ export interface GameRoom {
   board: Board;
 }
 
-export interface GameHandler {
-  createInitialState(): GameState;
-  handleJoinRoom(gameState: GameState, roomId: string, playerId: string): GameState;
-  handleMakeMove(gameState: GameState, roomId: string, playerId: string, move: { board: Board }): GameState;
-  handlePlayAgain(gameState: GameState, roomId: string, playerId: string): GameState;
+export interface GameHandler<T = PlayerSymbol> {
+  createInitialState(): GameState<T>;
+  handleJoinRoom(gameState: GameState<T>, roomId: string, playerId: string): GameState<T>;
+  handleMakeMove(gameState: GameState<T>, roomId: string, playerId: string, move: { board: Board }): GameState<T>;
+  handlePlayAgain(gameState: GameState<T>, roomId: string, playerId: string): GameState<T>;
   checkWinner(board: Board): string | null;
-  getPlayerSymbol(gameState: GameState, playerId: string): PlayerSymbol | null;
+  getPlayerSymbol(gameState: GameState<T>, playerId: string): T | null;
   handleRematch(
-    gameState: GameState, 
+    gameState: GameState<T>, 
     roomId: string, 
     playerId: string, 
     currentRematchState: RematchState | undefined, 
     socket: Socket, 
     io: Server
-  ): { newGameState: GameState; newRematchState?: RematchState };
-  handleDisconnect(gameState: GameState, roomId: string, playerId: string): GameState;
+  ): { newGameState: GameState<T>; newRematchState?: RematchState };
+  handleDisconnect(gameState: GameState<T>, roomId: string, playerId: string): GameState<T>;
 }
 
 export const gameHandlers: Record<string, GameHandler> = {
