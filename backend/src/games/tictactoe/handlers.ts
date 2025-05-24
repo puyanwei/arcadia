@@ -1,9 +1,9 @@
-import { GameState } from '../index';
+import { GameState } from '../gameMapper';
 import { Server, Socket } from 'socket.io';
 import { assignPlayerNumber } from './state';
-import { Board, RematchState } from './types';
+import { Board, RematchState } from '../types';
 
-export const handleJoinRoom = (gameState: GameState, roomId: string, playerId: string): GameState => {
+export function handleJoinRoomTTT(gameState: GameState, roomId: string, playerId: string): GameState {
   let room = gameState.rooms.get(roomId);
   if (!room) {
     room = {
@@ -23,7 +23,7 @@ export const handleJoinRoom = (gameState: GameState, roomId: string, playerId: s
   return gameState;
 };
 
-export const handleMakeMove = (gameState: GameState, roomId: string, playerId: string, move: { board: Board }): GameState => {
+export function handleMakeMoveTTT(gameState: GameState, roomId: string, playerId: string, move: { board: Board }): GameState {
   const room = gameState.rooms.get(roomId);
   if (!room) throw new Error('Room not found');
   
@@ -40,7 +40,7 @@ export const handleMakeMove = (gameState: GameState, roomId: string, playerId: s
   return gameState;
 };
 
-export const handlePlayAgain = (gameState: GameState, roomId: string, playerId: string): GameState => {
+export function handlePlayAgainTTT(gameState: GameState, roomId: string, playerId: string): GameState {
   const room = gameState.rooms.get(roomId);
   if (!room) throw new Error('Room not found');
 
@@ -48,14 +48,14 @@ export const handlePlayAgain = (gameState: GameState, roomId: string, playerId: 
   return gameState;
 };
 
-export const handleRematch = (
+export function handleRematchTTT(
   gameState: GameState,
   roomId: string,
   playerId: string,
   currentRematchState: RematchState | undefined,
   socket: Socket,
   io: Server
-): { newGameState: GameState; newRematchState?: RematchState } => {
+): { newGameState: GameState; newRematchState?: RematchState } {
   if (!currentRematchState) {
     const newRematchState: RematchState = {
       requested: true,
@@ -70,7 +70,7 @@ export const handleRematch = (
   }
 
   if (currentRematchState.requestedBy !== playerId) {
-    const newGameState = handlePlayAgain(gameState, roomId, playerId);
+    const newGameState = handlePlayAgainTTT(gameState, roomId, playerId);
     const shouldSwapFirst = Math.random() < 0.5;
     
     io.to(roomId).emit("updateBoard", Array(9).fill(null));
@@ -82,7 +82,7 @@ export const handleRematch = (
   return { newGameState: gameState };
 };
 
-export const handleDisconnect = (gameState: GameState, roomId: string, playerId: string): GameState => {
+export function handleDisconnectTTT(gameState: GameState, roomId: string, playerId: string): GameState {
   const room = gameState.rooms.get(roomId);
   if (!room) return gameState;
 
@@ -94,7 +94,7 @@ export const handleDisconnect = (gameState: GameState, roomId: string, playerId:
   return gameState;
 };
 
-export const emitGameState = (io: Server, gameState: GameState, roomId: string): void => {
+export function emitGameStateTTT(io: Server, gameState: GameState, roomId: string): void {
   const room = gameState.rooms.get(roomId);
   if (room) {
     io.to(roomId).emit("playerJoined", room.players.length);

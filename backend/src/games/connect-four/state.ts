@@ -1,7 +1,7 @@
-import { GameState, GameRoom } from '../index';
-import { ConnectFourCell, ConnectFourBoard, PlayerNumber } from './types';
+import { GameState, GameRoom } from '../gameMapper';
+import { ConnectFourCell, ConnectFourBoard, PlayerNumber } from '../types';
 
-export function createInitialState(): GameState<PlayerNumber> {
+export function createInitialStateCF(): GameState<PlayerNumber> {
   return {
     rooms: new Map<string, GameRoom>(),
     playerNumbers: new Map<string, PlayerNumber>()
@@ -15,10 +15,6 @@ export function getPlayerRoom(gameState: GameState<PlayerNumber>, playerId: stri
     }
   }
   return undefined;
-}
-
-export function getPlayerNumber(gameState: GameState<PlayerNumber>, playerId: string): PlayerNumber | null {
-  return gameState.playerNumbers.get(playerId) || null;
 }
 
 export function assignPlayerNumber(gameState: GameState<PlayerNumber>, room: GameRoom, playerId: string): void {
@@ -55,7 +51,7 @@ export function checkLine(board: ConnectFourBoard, startIdx: number, step: numbe
   return first;
 }
 
-export function checkWinner(board: ConnectFourBoard, columns: number, rows: number): ConnectFourCell | 'draw' | null {
+export function checkWinnerCF(board: ConnectFourBoard, columns: number, rows: number): ConnectFourCell | 'draw' | null {
   // Check horizontal
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col <= columns - 4; col++) {

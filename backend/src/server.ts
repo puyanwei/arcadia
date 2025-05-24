@@ -3,10 +3,9 @@ import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
-import { GameHandler, gameHandlers, GameState, GameType } from './games';
-import { emitGameState } from './games/tictactoe/handlers';
+import { GameHandler, gameHandlers, GameState, GameType, getPlayerNumber } from './games/gameMapper';
 import { getPlayerRoom } from "./games/tictactoe/state";
-import { RematchState } from './games/tictactoe/types';
+import { RematchState } from './games/types';
 
 dotenv.config();
 
@@ -91,9 +90,9 @@ type SocketHandlerParams = {
   data?: SocketHandlerData;
 };
 
-type SocketHandlerData = { gameType: string, roomId: string, board?: any };
+type SocketHandlerData = { gameType: GameType, roomId: string, board?: any };
 
-function onJoinRoom({ data, socket, io, gameStates, gameHandlers, emitGameState }: SocketHandlerParams) {
+function onJoinRoom({ data, socket, io, gameStates, gameHandlers }: SocketHandlerParams) {
   const { gameType, roomId } = data;
   if (!validateGameType(gameType)) {
     socket.emit("error", "Invalid game type");
@@ -109,11 +108,10 @@ function onJoinRoom({ data, socket, io, gameStates, gameHandlers, emitGameState 
     const newGameState = handler.handleJoinRoom(gameState, roomId, socket.id);
     gameStates.set(gameType, newGameState);
     socket.join(roomId);
-    const symbol = handler.getPlayerNumber(newGameState, socket.id);
-    if (symbol) {
-      socket.emit("playerSymbol", symbol);
+    const playerNumber = getPlayerNumber(newGameState, socket.id);
+    if (playerNumber) {
+      socket.emit("playerNumber", playerNumber);
     }
-    emitGameState?.(io, newGameState, roomId);
   } catch (error) {
     socket.emit("error", error.message);
   }
@@ -121,12 +119,11 @@ function onJoinRoom({ data, socket, io, gameStates, gameHandlers, emitGameState 
 
 function onPlayAgain({ data, socket, io, gameStates, gameHandlers, rematchStates }: SocketHandlerParams) {
   const { gameType, roomId } = data;
-  const handler = gameHandlers[gameType];
   const gameState = gameStates.get(gameType)!;
   const room = gameState.rooms.get(roomId);
   if (!room) return;
   const currentRematchState = rematchStates?.get(roomId);
-  const { newGameState, newRematchState } = handler.handleRematch(
+  const { newGameState, newRematchState } = gameHandlers[gameType].handleRematch(
     gameState,
     roomId,
     socket.id,
@@ -166,10 +163,10 @@ function onMakeMove({ data, socket, io, gameStates, gameHandlers }: SocketHandle
         message: "Game ended in a draw!" 
       });
     } else {
-      const winnerSymbol = result;
+      const winnerPlayerNumber = result;
       room.players.forEach(playerId => {
-        const playerNumber = handler.getPlayerNumber(gameStates.get(gameType)!, playerId);
-        const isWinner = playerNumber === winnerSymbol;
+        const playerNumber = getPlayerNumber(gameStates.get(gameType)!, playerId);
+        const isWinner = playerNumber === winnerPlayerNumber;
         io.to(playerId).emit("gameEnd", {
           winner: result,
           message: isWinner ? "You won!" : "You lost!"
@@ -201,21 +198,11 @@ function onDisconnect({ socket, io, gameStates, gameHandlers, rematchStates }: S
 
 io.on("connection", (socket: Socket) => {
   console.log("User connected:", socket.id);
-  socket.on("joinRoom", (data) => onJoinRoom({ data, socket, io, gameStates, gameHandlers, emitGameState }));
+  socket.on("joinRoom", (data) => onJoinRoom({ data, socket, io, gameStates, gameHandlers }));
   socket.on("playAgain", (data) => onPlayAgain({ data, socket, io, gameStates, gameHandlers, rematchStates }));
   socket.on("makeMove", (data) => onMakeMove({ data, socket, io, gameStates, gameHandlers }));
   socket.on("disconnect", () => onDisconnect({ socket, io, gameStates, gameHandlers, rematchStates }));
 });
-
-function getGameTypeFromRoom(roomId: string): GameType {
-  // Check each game state to find the room
-  for (const [gameType, gameState] of gameStates.entries()) {
-    if (gameState.rooms.has(roomId)) {
-      return gameType as GameType;
-    }
-  }
-  return 'tictactoe'; // Default to tictactoe if room not found
-}
 
 function validateGameType(gameType: string): gameType is GameType {
   return gameType in gameHandlers;

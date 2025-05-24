@@ -1,42 +1,14 @@
-import { GameState, GameRoom } from '../index';
-import { Board, PlayerNumber } from './types'
+import { GameState, GameRoom } from '../gameMapper';
+import { Board, PlayerNumber } from '../types'
 
-function shuffleNumbers(): ["player1", "player2"] | ["player2", "player1"] {
-  return Math.random() < 0.5 ? ["player1", "player2"] : ["player2", "player1"];
+export function createInitialStateTTT(): GameState {
+  return {
+    rooms: new Map<string, GameRoom>(),
+    playerNumbers: new Map<string, PlayerNumber>()
+  };
 }
 
-export const createInitialState = (): GameState => ({
-  rooms: new Map<string, GameRoom>(),
-  playerNumbers: new Map<string, PlayerNumber>()
-});
-
-export const getPlayerRoom = (gameState: GameState, playerId: string): GameRoom | null => {
-  for (const room of gameState.rooms.values()) {
-    if (room.players.includes(playerId)) {
-      return room;
-    }
-  }
-  return null;
-};
-
-export const getPlayerNumber = (gameState: GameState, playerId: string): PlayerNumber | null => {
-  return gameState.playerNumbers.get(playerId) || null;
-};
-
-export const assignPlayerNumber = (gameState: GameState, room: GameRoom, playerId: string): PlayerNumber => {
-  let number: PlayerNumber;
-  if (room.players.length === 0) {
-    const [firstNumber] = shuffleNumbers();
-    number = firstNumber;
-  } else {
-    const firstPlayerNumber = gameState.playerNumbers.get(room.players[0]);
-    number = firstPlayerNumber === "player1" ? "player2" : "player1";
-  }
-  gameState.playerNumbers.set(playerId, number);
-  return number;
-};
-
-export const checkWinner = (board: Board): string | null => {
+export function checkWinnerTTT(board: Board): string | null {
   const lines = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
     [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
@@ -51,3 +23,32 @@ export const checkWinner = (board: Board): string | null => {
 
   return board.every(cell => cell) ? 'draw' : null;
 }; 
+
+function shuffleNumbers(): ["player1", "player2"] | ["player2", "player1"] {
+  return Math.random() < 0.5 ? ["player1", "player2"] : ["player2", "player1"];
+}
+
+
+export const getPlayerRoom = (gameState: GameState, playerId: string): GameRoom | null => {
+  for (const room of gameState.rooms.values()) {
+    if (room.players.includes(playerId)) {
+      return room;
+    }
+  }
+  return null;
+};
+
+
+export const assignPlayerNumber = (gameState: GameState, room: GameRoom, playerId: string): PlayerNumber => {
+  let number: PlayerNumber;
+  if (room.players.length === 0) {
+    const [firstNumber] = shuffleNumbers();
+    number = firstNumber;
+  } else {
+    const firstPlayerNumber = gameState.playerNumbers.get(room.players[0]);
+    number = firstPlayerNumber === "player1" ? "player2" : "player1";
+  }
+  gameState.playerNumbers.set(playerId, number);
+  return number;
+};
+

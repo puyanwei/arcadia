@@ -1,3 +1,6 @@
+import { Prettify } from '../utils/types';
+
+export type GameType = 'tictactoe' | 'connect-four';
 export type Cell = (string | null)
 export type Board = Cell[]
 export type PlayerNumber = 'player1' | 'player2';
@@ -7,3 +10,6 @@ export type RematchState = {
   requestedBy: string;
   status?: RematchStatus;
 }; 
+
+export type ConnectFourCell = Prettify<PlayerNumber | 'invalid' | 'valid'>
+export type ConnectFourBoard = ConnectFourCell[];

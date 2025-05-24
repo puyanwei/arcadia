@@ -1,10 +1,17 @@
-import { GameHandler, GameState, GameRoom } from '../index';
+import {  GameState, GameRoom } from '../gameMapper';
 import { Server, Socket } from 'socket.io';
-import { checkWinner, assignPlayerNumber, getPlayerNumber } from './state';
-import { RematchState } from '../tictactoe/types';
-import { ConnectFourBoard, PlayerNumber } from './types';
+import { assignPlayerNumber } from './state';
+import { ConnectFourBoard, PlayerNumber } from '../types';
+import { RematchState } from '../types';
 
-export const handleJoinRoom = (gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> => {
+export function createInitialStateCF(): GameState<PlayerNumber> {
+  return {
+    rooms: new Map<string, GameRoom>(),
+    playerNumbers: new Map<string, PlayerNumber>()
+  };
+}
+
+export function handleJoinRoomCF(gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> {
   let room = gameState.rooms.get(roomId);
   if (!room) {
     room = {
@@ -24,7 +31,7 @@ export const handleJoinRoom = (gameState: GameState<PlayerNumber>, roomId: strin
   return gameState;
 };
 
-export const handleMakeMove = (gameState: GameState<PlayerNumber>, roomId: string, playerId: string, move: { board: ConnectFourBoard }): GameState<PlayerNumber> => {
+export function handleMakeMoveCF(gameState: GameState<PlayerNumber>, roomId: string, playerId: string, move: { board: ConnectFourBoard }): GameState<PlayerNumber> {
   const room = gameState.rooms.get(roomId);
   if (!room) throw new Error('Room not found');
   
@@ -41,7 +48,7 @@ export const handleMakeMove = (gameState: GameState<PlayerNumber>, roomId: strin
   return gameState;
 };
 
-export const handlePlayAgain = (gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> => {
+export function handlePlayAgainCF(gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> {
   const room = gameState.rooms.get(roomId);
   if (!room) throw new Error('Room not found');
 
@@ -49,14 +56,14 @@ export const handlePlayAgain = (gameState: GameState<PlayerNumber>, roomId: stri
   return gameState;
 };
 
-export const handleRematch = (
+export function handleRematchCF(
   gameState: GameState<PlayerNumber>,
   roomId: string,
   playerId: string,
   currentRematchState: RematchState | undefined,
   socket: Socket,
   io: Server
-): { newGameState: GameState<PlayerNumber>; newRematchState?: RematchState } => {
+): { newGameState: GameState<PlayerNumber>; newRematchState?: RematchState } {
   if (!currentRematchState) {
     const newRematchState: RematchState = {
       requested: true,
@@ -71,7 +78,7 @@ export const handleRematch = (
   }
 
   if (currentRematchState.requestedBy !== playerId) {
-    const newGameState = handlePlayAgain(gameState, roomId, playerId);
+    const newGameState = handlePlayAgainCF(gameState, roomId, playerId);
     
     io.to(roomId).emit("updateBoard", Array(42).fill('valid') as ConnectFourBoard);
     io.to(roomId).emit("gameStart", true);
@@ -82,7 +89,7 @@ export const handleRematch = (
   return { newGameState: gameState };
 };
 
-export const handleDisconnect = (gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> => {
+export function handleDisconnectCF(gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> {
   const room = gameState.rooms.get(roomId);
   if (!room) return gameState;
 
@@ -92,18 +99,4 @@ export const handleDisconnect = (gameState: GameState<PlayerNumber>, roomId: str
   }
   gameState.playerNumbers.delete(playerId);
   return gameState;
-};
-
-export const connectFourHandler: GameHandler<PlayerNumber> = {
-  createInitialState: () => ({
-    rooms: new Map<string, GameRoom>(),
-    playerNumbers: new Map<string, PlayerNumber>()
-  }),
-  handleJoinRoom,
-  handleMakeMove,
-  handlePlayAgain,
-  checkWinner: (board) => checkWinner(board as ConnectFourBoard, 7, 6),
-  getPlayerNumber,
-  handleRematch,
-  handleDisconnect
 };

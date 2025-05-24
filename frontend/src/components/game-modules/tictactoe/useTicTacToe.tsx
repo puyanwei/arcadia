@@ -4,7 +4,7 @@ import { useSocket } from '@/hooks/useSocket';
 import { GameRoomState, useGameRoom } from '@/hooks/useGameRoom';
 import { GameState, GameActions, Board } from './types';
 
-type PlayerSymbol = 'player1' | 'player2';
+type PlayerNumber = 'player1' | 'player2';
 type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & { isConnected: boolean, connectionError: string | null };
 
 export function useTicTacToe(): UseTicTacToeReturnType {
