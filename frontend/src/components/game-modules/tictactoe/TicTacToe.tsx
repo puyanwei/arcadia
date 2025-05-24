@@ -6,7 +6,7 @@ import { useTicTacToe } from "./useTicTacToe";
 
 export default function TicTacToe() {
   const {
-    playerSymbol,
+    playerNumber,
     isMyTurn,
     gameStarted,
     gameFinished,
@@ -46,7 +46,7 @@ export default function TicTacToe() {
         </div>
       )}
 
-      {!playerSymbol && (
+      {!playerNumber && (
         <>
           <input
             className="border p-2 my-2 w-64 bg-gray-800 text-white border-gray-600"
@@ -69,10 +69,10 @@ export default function TicTacToe() {
         {gameStatus}
       </div>
 
-      {playerSymbol && (
+      {playerNumber && (
         <div className="mb-4 text-center">
-          <span className={`px-3 py-1 rounded ${playerSymbol === 'X' ? 'bg-blue-600' : 'bg-red-600'}`}>
-            You are {playerSymbol}
+          <span className={`px-3 py-1 rounded ${playerNumber === 'player1' ? 'bg-blue-600' : 'bg-red-600'}`}>
+            You are {playerNumber === 'player1' ? 'X' : 'O'}
           </span>
         </div>
       )}
@@ -83,11 +83,11 @@ export default function TicTacToe() {
             key={i}
             className={`w-20 h-20 flex items-center justify-center text-2xl border-2 border-gray-600 
               ${!cell && isMyTurn && gameStarted ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-800'} 
-              ${cell === 'X' ? 'text-blue-400' : cell === 'O' ? 'text-red-400' : 'text-white'}`}
+              ${cell === 'player1' ? 'text-blue-400' : cell === 'player2' ? 'text-red-400' : 'text-white'}`}
             onClick={() => makeMove(i, roomId)}
             disabled={!isMyTurn || !!cell || !gameStarted}
           >
-            {cell || '-'}
+            {cell === 'player1' ? 'X' : cell === 'player2' ? 'O' : '-'}
           </button>
         ))}
       </div>

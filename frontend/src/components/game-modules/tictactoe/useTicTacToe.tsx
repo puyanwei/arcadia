@@ -4,7 +4,7 @@ import { useSocket } from '@/hooks/useSocket';
 import { GameRoomState, useGameRoom } from '@/hooks/useGameRoom';
 import { GameState, GameActions, Board } from './types';
 
-type PlayerSymbol = "X" | "O";
+type PlayerSymbol = 'player1' | 'player2';
 type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & { isConnected: boolean, connectionError: string | null };
 
 export function useTicTacToe(): UseTicTacToeReturnType {
@@ -13,7 +13,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   const { roomState, joinRoom, playAgain } = useGameRoom('tictactoe');
   const [gameState, setGameState] = useState<GameState>({
     board: Array(9).fill(null),
-    playerSymbol: null,
+    playerNumber: null,
     isMyTurn: false,
     playersInRoom: 0,
     gameStarted: false,
@@ -41,12 +41,13 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       });
     };
 
-    const handlePlayerSymbol = (symbol: PlayerSymbol) => {
+    const handlePlayerNumber = (number: 'player1' | 'player2' | 'X' | 'O' | 'yellow' | 'red') => {
+      if (number !== 'player1' && number !== 'player2') return;
       setGameState(prev => ({
         ...prev,
-        playerSymbol: symbol,
-        isMyTurn: symbol === "X",
-        gameStatus: `You are player ${symbol}. ${symbol === "X" ? "It's your turn!" : "Waiting for X to move..."}`
+        playerNumber: number,
+        isMyTurn: number === 'player1',
+        gameStatus: `You are ${number === 'player1' ? 'X' : 'O'}. ${number === 'player1' ? "It's your turn!" : "Waiting for X to move..."}`
       }));
     };
 
@@ -62,12 +63,12 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     };
 
     on("updateBoard", handleUpdateBoard);
-    on("playerSymbol", handlePlayerSymbol);
+    on("playerSymbol", handlePlayerNumber);
     on("gameEnd", handleGameEnd);
 
     return () => {
       off("updateBoard", handleUpdateBoard);
-      off("playerSymbol", handlePlayerSymbol);
+      off("playerSymbol", handlePlayerNumber);
       off("gameEnd", handleGameEnd);
     };
   }, [on, off, setBoard]);
@@ -80,9 +81,9 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       }));
       return;
     }
-    if (!board[index] && gameState.isMyTurn && gameState.playerSymbol) {
+    if (!board[index] && gameState.isMyTurn && gameState.playerNumber) {
       const newBoard = [...board];
-      newBoard[index] = gameState.playerSymbol;
+      newBoard[index] = gameState.playerNumber;
       setBoard(newBoard);
       setGameState(prev => ({
         ...prev,

@@ -1,5 +1,5 @@
 import { Board } from '../tictactoe/types';
 
-export type ConnectFourCell = 'yellow' | 'red' | 'invalid' | 'valid';
+export type ConnectFourCell = 'player1' | 'player2' | 'invalid' | 'valid';
 export type ConnectFourBoard = ConnectFourCell[];
-export type ConnectFourPlayerSymbol = 'yellow' | 'red'; 
+export type PlayerNumber = 'player1' | 'player2'; 

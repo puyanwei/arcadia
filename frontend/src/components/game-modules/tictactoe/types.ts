@@ -4,7 +4,7 @@ export type Board = (string | null)[];
 
 export type GameState = {
   board: Board;
-  playerSymbol: string | null;
+  playerNumber: 'player1' | 'player2' | null;
   isMyTurn: boolean;
   playersInRoom: number;
   gameStarted: boolean;

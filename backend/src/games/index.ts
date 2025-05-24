@@ -20,9 +20,9 @@ export interface GameRoom {
   board: Board;
 }
 
-export interface GameState<T = PlayerSymbol> {
+export interface GameState<T = PlayerNumber> {
   rooms: Map<string, GameRoom>;
-  playerSymbols: Map<string, T>;
+  playerNumbers: Map<string, T>;
 }
 
 export interface GameHandler<T = PlayerSymbol> {

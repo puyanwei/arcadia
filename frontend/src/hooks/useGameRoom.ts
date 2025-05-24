@@ -17,6 +17,7 @@ export type RoomFullEventHandler = () => void;
 export type PlayerLeftEventHandler = (message: string) => void;
 export type RematchStateEventHandler = (payload: { status: RematchStatus; message: string }) => void;
 export type GameStartEventHandler = () => void;
+export type PlayerNumberEventHandler = (number: 'player1' | 'player2') => void;
 
 // Event map
 export type GameRoomEventHandlerMap = {
@@ -26,8 +27,9 @@ export type GameRoomEventHandlerMap = {
   rematchState: RematchStateEventHandler;
   gameStart: GameStartEventHandler;
   updateBoard: (newBoard: any) => void;
-  playerSymbol: (symbol: "X" | "O") => void;
+  playerSymbol: (symbol: "X" | "O" | "yellow" | "red") => void;
   gameEnd: (data: { winner: string; message: string }) => void;
+  playerNumber: PlayerNumberEventHandler;
 };
 
 // Event name union
@@ -76,6 +78,10 @@ export function useGameRoom(gameType: string) {
     setRoomState(prev => ({ ...prev, gameStarted: true, rematchStatus: null }));
   }, []);
 
+  const handlePlayerNumber: PlayerNumberEventHandler = useCallback((number) => {
+    // Implementation needed
+  }, []);
+
   // --- Array of event-handler pairs ---
   const eventHandlers: GameRoomEventHandlerTuple[] = [
     ['playerJoined', handlePlayerJoined],
@@ -83,6 +89,7 @@ export function useGameRoom(gameType: string) {
     ['playerLeft', handlePlayerLeft],
     ['rematchState', handleRematchState],
     ['gameStart', handleGameStart],
+    ['playerNumber', handlePlayerNumber],
   ];
 
   useEffect(() => {

@@ -13,7 +13,7 @@ export function useConnectFour(): UseConnectFourReturnType {
   const rows = boardGrid['connect-four'].rows;
   const [gameState, setGameState] = useState<GameState>({
     board: Array(columns * rows).fill('valid'),
-    playerSymbol: null,
+    playerNumber: null,
     isMyTurn: false,
     playersInRoom: 0,
     gameStarted: false,
@@ -51,9 +51,9 @@ export function useConnectFour(): UseConnectFourReturnType {
     return cellStates;
   }
 
-  function checkLine(board: ConnectFourCell[], startIdx: number, step: number): 'yellow' | 'red' | null {
+  function checkLine(board: ConnectFourCell[], startIdx: number, step: number): 'player1' | 'player2' | null {
     const first = board[startIdx];
-    if (first === 'valid') return null;
+    if (first !== 'player1' && first !== 'player2') return null;
     
     for (let i = 1; i < 4; i++) {
       if (board[startIdx + step * i] !== first) return null;
@@ -61,7 +61,7 @@ export function useConnectFour(): UseConnectFourReturnType {
     return first;
   }
 
-  function checkWinner(board: ConnectFourCell[]): 'yellow' | 'red' | 'draw' | null {
+  function checkWinner(board: ConnectFourCell[]): 'player1' | 'player2' | 'draw' | null {
     // Check horizontal
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col <= columns - 4; col++) {
@@ -118,12 +118,13 @@ export function useConnectFour(): UseConnectFourReturnType {
       });
     };
 
-    const handlePlayerSymbol = (symbol: 'yellow' | 'red') => {
+    const handlePlayerNumber = (number: 'player1' | 'player2' | 'X' | 'O' | 'yellow' | 'red') => {
+      if (number !== 'player1' && number !== 'player2') return;
       setGameState(prev => ({
         ...prev,
-        playerSymbol: symbol,
-        isMyTurn: symbol === 'yellow',
-        gameStatus: `You are player ${symbol}. ${symbol === 'yellow' ? "It's your turn!" : "Waiting for yellow to move..."}`
+        playerNumber: number,
+        isMyTurn: number === 'player1',
+        gameStatus: `You are ${number === 'player1' ? 'yellow' : 'red'}. ${number === 'player1' ? "It's your turn!" : "Waiting for yellow to move..."}`
       }));
     };
 
@@ -139,12 +140,12 @@ export function useConnectFour(): UseConnectFourReturnType {
     };
 
     on("updateBoard", handleUpdateBoard);
-    on("playerSymbol", handlePlayerSymbol);
+    on("playerNumber", handlePlayerNumber);
     on("gameEnd", handleGameEnd);
 
     return () => {
       off("updateBoard", handleUpdateBoard);
-      off("playerSymbol", handlePlayerSymbol);
+      off("playerNumber", handlePlayerNumber);
       off("gameEnd", handleGameEnd);
     };
   }, [on, off]);
@@ -161,9 +162,9 @@ export function useConnectFour(): UseConnectFourReturnType {
     const col = index % columns;
     const cellStates = computeCellStates(gameState.board);
     
-    if (cellStates[index] === 'valid' && gameState.isMyTurn && gameState.playerSymbol) {
+    if (cellStates[index] === 'valid' && gameState.isMyTurn && gameState.playerNumber) {
       const newBoard = [...gameState.board];
-      newBoard[index] = gameState.playerSymbol;
+      newBoard[index] = gameState.playerNumber;
       
       const updatedCellStates = computeCellStates(newBoard);
       const winner = checkWinner(updatedCellStates);

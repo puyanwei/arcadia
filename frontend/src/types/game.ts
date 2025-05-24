@@ -1,4 +1,4 @@
-export type PlayerSymbol = "X" | "O" | null;
+export type PlayerNumber = 'player1' | 'player2' | null;
 export type Cell = (string | null)
 export type Board = Cell[]
 
@@ -6,7 +6,7 @@ export type RematchStatus = "waiting" | "pending" | null;
 
 export type GameState = {
   board: Board;
-  playerSymbol: string | null;
+  playerNumber: string | null;
   isMyTurn: boolean;
   gameStarted: boolean;
   gameFinished: boolean;

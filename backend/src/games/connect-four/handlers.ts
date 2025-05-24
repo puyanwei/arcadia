@@ -1,10 +1,10 @@
 import { GameHandler, GameState, GameRoom } from '../index';
 import { Server, Socket } from 'socket.io';
-import { checkWinner, getLowestEmptyCellInColumn, assignPlayerSymbol, getPlayerSymbol } from './state';
+import { checkWinner, getLowestEmptyCellInColumn, assignPlayerNumber, getPlayerNumber } from './state';
 import { RematchState } from '../tictactoe/types';
-import { ConnectFourCell, ConnectFourBoard, ConnectFourPlayerSymbol } from './types';
+import { ConnectFourCell, ConnectFourBoard, PlayerNumber } from './types';
 
-export const handleJoinRoom = (gameState: GameState<ConnectFourPlayerSymbol>, roomId: string, playerId: string): GameState<ConnectFourPlayerSymbol> => {
+export const handleJoinRoom = (gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> => {
   let room = gameState.rooms.get(roomId);
   if (!room) {
     room = {
@@ -20,11 +20,11 @@ export const handleJoinRoom = (gameState: GameState<ConnectFourPlayerSymbol>, ro
 
   room.players.push(playerId);
   gameState.rooms.set(roomId, room);
-  assignPlayerSymbol(gameState, room, playerId);
+  assignPlayerNumber(gameState, room, playerId);
   return gameState;
 };
 
-export const handleMakeMove = (gameState: GameState<ConnectFourPlayerSymbol>, roomId: string, playerId: string, move: { board: ConnectFourBoard }): GameState<ConnectFourPlayerSymbol> => {
+export const handleMakeMove = (gameState: GameState<PlayerNumber>, roomId: string, playerId: string, move: { board: ConnectFourBoard }): GameState<PlayerNumber> => {
   const room = gameState.rooms.get(roomId);
   if (!room) throw new Error('Room not found');
   
@@ -41,7 +41,7 @@ export const handleMakeMove = (gameState: GameState<ConnectFourPlayerSymbol>, ro
   return gameState;
 };
 
-export const handlePlayAgain = (gameState: GameState<ConnectFourPlayerSymbol>, roomId: string, playerId: string): GameState<ConnectFourPlayerSymbol> => {
+export const handlePlayAgain = (gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> => {
   const room = gameState.rooms.get(roomId);
   if (!room) throw new Error('Room not found');
 
@@ -50,13 +50,13 @@ export const handlePlayAgain = (gameState: GameState<ConnectFourPlayerSymbol>, r
 };
 
 export const handleRematch = (
-  gameState: GameState<ConnectFourPlayerSymbol>,
+  gameState: GameState<PlayerNumber>,
   roomId: string,
   playerId: string,
   currentRematchState: RematchState | undefined,
   socket: Socket,
   io: Server
-): { newGameState: GameState<ConnectFourPlayerSymbol>; newRematchState?: RematchState } => {
+): { newGameState: GameState<PlayerNumber>; newRematchState?: RematchState } => {
   if (!currentRematchState) {
     const newRematchState: RematchState = {
       requested: true,
@@ -82,7 +82,7 @@ export const handleRematch = (
   return { newGameState: gameState };
 };
 
-export const handleDisconnect = (gameState: GameState<ConnectFourPlayerSymbol>, roomId: string, playerId: string): GameState<ConnectFourPlayerSymbol> => {
+export const handleDisconnect = (gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> => {
   const room = gameState.rooms.get(roomId);
   if (!room) return gameState;
 
@@ -90,20 +90,20 @@ export const handleDisconnect = (gameState: GameState<ConnectFourPlayerSymbol>, 
   if (room.players.length === 0) {
     gameState.rooms.delete(roomId);
   }
-  gameState.playerSymbols.delete(playerId);
+  gameState.playerNumbers.delete(playerId);
   return gameState;
 };
 
-export const connectFourHandler: GameHandler<ConnectFourPlayerSymbol> = {
+export const connectFourHandler: GameHandler<PlayerNumber> = {
   createInitialState: () => ({
     rooms: new Map<string, GameRoom>(),
-    playerSymbols: new Map<string, ConnectFourPlayerSymbol>()
+    playerNumbers: new Map<string, PlayerNumber>()
   }),
   handleJoinRoom,
   handleMakeMove,
   handlePlayAgain,
   checkWinner: (board) => checkWinner(board as ConnectFourBoard, 7, 6),
-  getPlayerSymbol,
+  getPlayerNumber,
   handleRematch,
   handleDisconnect
 };

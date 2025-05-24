@@ -4,7 +4,7 @@ import { ConnectFourCell } from './types';
 
 export default function ConnectFour() {
   const {
-    playerSymbol,
+    playerNumber,
     isMyTurn,
     gameStarted,
     gameFinished,
@@ -37,8 +37,8 @@ export default function ConnectFour() {
     const red = "bg-red-300 text-white";
     const invalid = "bg-gray-300 text-gray-400 cursor-not-allowed";
     if (cell === 'valid') return `${base} ${valid}`;
-    if (cell === 'yellow') return `${base} ${yellow}`;
-    if (cell === 'red') return `${base} ${red}`;
+    if (cell === 'player1') return `${base} ${yellow}`;
+    if (cell === 'player2') return `${base} ${red}`;
     if (cell === 'invalid') return `${base} ${invalid}`;
   }
 
@@ -56,7 +56,7 @@ export default function ConnectFour() {
         </div>
       )}
 
-      {!playerSymbol && (
+      {!playerNumber && (
         <>
           <input
             className="border p-2 my-2 w-64 bg-gray-800 text-white border-gray-600"
@@ -79,10 +79,10 @@ export default function ConnectFour() {
         {gameStatus}
       </div>
 
-      {playerSymbol && (
+      {playerNumber && (
         <div className="mb-4 text-center">
-          <span className={`px-3 py-1 rounded ${playerSymbol === 'yellow' ? 'bg-yellow-600' : 'bg-red-600'}`}>
-            You are {playerSymbol}
+          <span className={`px-3 py-1 rounded ${playerNumber === 'player1' ? 'bg-yellow-600' : 'bg-red-600'}`}>
+            You are {playerNumber === 'player1' ? 'yellow' : 'red'}
           </span>
         </div>
       )}
@@ -98,7 +98,7 @@ export default function ConnectFour() {
               disabled={cell !== 'valid' || !isMyTurn || !gameStarted}
               onClick={() => makeMove(i, roomId)}
             >
-              {cell === 'yellow' ? '●' : cell === 'red' ? '●' : ''}
+              {cell === 'player1' ? '●' : cell === 'player2' ? '●' : ''}
             </button>
           );
         })}

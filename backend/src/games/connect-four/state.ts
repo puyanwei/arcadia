@@ -1,14 +1,14 @@
 import { GameState, GameRoom } from '../index';
-import { ConnectFourCell, ConnectFourBoard, ConnectFourPlayerSymbol } from './types';
+import { ConnectFourCell, ConnectFourBoard, PlayerNumber } from './types';
 
-export function createInitialState(): GameState<ConnectFourPlayerSymbol> {
+export function createInitialState(): GameState<PlayerNumber> {
   return {
     rooms: new Map<string, GameRoom>(),
-    playerSymbols: new Map<string, ConnectFourPlayerSymbol>()
+    playerNumbers: new Map<string, PlayerNumber>()
   };
 }
 
-export function getPlayerRoom(gameState: GameState<ConnectFourPlayerSymbol>, playerId: string): GameRoom | undefined {
+export function getPlayerRoom(gameState: GameState<PlayerNumber>, playerId: string): GameRoom | undefined {
   for (const room of gameState.rooms.values()) {
     if (room.players.includes(playerId)) {
       return room;
@@ -17,15 +17,15 @@ export function getPlayerRoom(gameState: GameState<ConnectFourPlayerSymbol>, pla
   return undefined;
 }
 
-export function getPlayerSymbol(gameState: GameState<ConnectFourPlayerSymbol>, playerId: string): ConnectFourPlayerSymbol | null {
-  return gameState.playerSymbols.get(playerId) || null;
+export function getPlayerNumber(gameState: GameState<PlayerNumber>, playerId: string): PlayerNumber | null {
+  return gameState.playerNumbers.get(playerId) || null;
 }
 
-export function assignPlayerSymbol(gameState: GameState<ConnectFourPlayerSymbol>, room: GameRoom, playerId: string): void {
+export function assignPlayerNumber(gameState: GameState<PlayerNumber>, room: GameRoom, playerId: string): void {
   if (room.players.length === 1) {
-    gameState.playerSymbols.set(playerId, 'yellow');
+    gameState.playerNumbers.set(playerId, 'player1');
   } else if (room.players.length === 2) {
-    gameState.playerSymbols.set(playerId, 'red');
+    gameState.playerNumbers.set(playerId, 'player2');
   }
 }
 

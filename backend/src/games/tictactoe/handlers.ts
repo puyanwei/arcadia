@@ -3,8 +3,8 @@ import { Server, Socket } from 'socket.io';
 import { 
   createInitialState, 
   getPlayerRoom, 
-  getPlayerSymbol, 
-  assignPlayerSymbol,
+  getPlayerNumber, 
+  assignPlayerNumber,
   checkWinner 
 } from './state';
 import { Board, RematchState } from './types';
@@ -25,7 +25,7 @@ export const handleJoinRoom = (gameState: GameState, roomId: string, playerId: s
 
   room.players.push(playerId);
   gameState.rooms.set(roomId, room);
-  assignPlayerSymbol(gameState, room, playerId);
+  assignPlayerNumber(gameState, room, playerId);
   return gameState;
 };
 
@@ -96,7 +96,7 @@ export const handleDisconnect = (gameState: GameState, roomId: string, playerId:
   if (room.players.length === 0) {
     gameState.rooms.delete(roomId);
   }
-  gameState.playerSymbols.delete(playerId);
+  gameState.playerNumbers.delete(playerId);
   return gameState;
 };
 

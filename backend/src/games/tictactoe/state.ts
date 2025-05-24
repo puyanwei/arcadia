@@ -1,13 +1,13 @@
 import { GameState, GameRoom } from '../index';
-import { Board, PlayerSymbol } from './types'
+import { Board, PlayerNumber } from './types'
 
-function shuffleSymbols(): ["X", "O"] | ["O", "X"] {
-  return Math.random() < 0.5 ? ["X", "O"] : ["O", "X"];
+function shuffleNumbers(): ["player1", "player2"] | ["player2", "player1"] {
+  return Math.random() < 0.5 ? ["player1", "player2"] : ["player2", "player1"];
 }
 
 export const createInitialState = (): GameState => ({
   rooms: new Map<string, GameRoom>(),
-  playerSymbols: new Map<string, PlayerSymbol>()
+  playerNumbers: new Map<string, PlayerNumber>()
 });
 
 export const getPlayerRoom = (gameState: GameState, playerId: string): GameRoom | null => {
@@ -19,21 +19,21 @@ export const getPlayerRoom = (gameState: GameState, playerId: string): GameRoom 
   return null;
 };
 
-export const getPlayerSymbol = (gameState: GameState, playerId: string): PlayerSymbol | null => {
-  return gameState.playerSymbols.get(playerId) || null;
+export const getPlayerNumber = (gameState: GameState, playerId: string): PlayerNumber | null => {
+  return gameState.playerNumbers.get(playerId) || null;
 };
 
-export const assignPlayerSymbol = (gameState: GameState, room: GameRoom, playerId: string): PlayerSymbol => {
-  let symbol: PlayerSymbol;
+export const assignPlayerNumber = (gameState: GameState, room: GameRoom, playerId: string): PlayerNumber => {
+  let number: PlayerNumber;
   if (room.players.length === 0) {
-    const [firstSymbol] = shuffleSymbols();
-    symbol = firstSymbol;
+    const [firstNumber] = shuffleNumbers();
+    number = firstNumber;
   } else {
-    const firstPlayerSymbol = gameState.playerSymbols.get(room.players[0]);
-    symbol = firstPlayerSymbol === "X" ? "O" : "X";
+    const firstPlayerNumber = gameState.playerNumbers.get(room.players[0]);
+    number = firstPlayerNumber === "player1" ? "player2" : "player1";
   }
-  gameState.playerSymbols.set(playerId, symbol);
-  return symbol;
+  gameState.playerNumbers.set(playerId, number);
+  return number;
 };
 
 export const checkWinner = (board: Board): string | null => {
