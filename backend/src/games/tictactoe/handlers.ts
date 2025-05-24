@@ -1,12 +1,6 @@
-import { GameState, GameType } from '../index';
+import { GameState } from '../index';
 import { Server, Socket } from 'socket.io';
-import { 
-  createInitialState, 
-  getPlayerRoom, 
-  getPlayerNumber, 
-  assignPlayerNumber,
-  checkWinner 
-} from './state';
+import { assignPlayerNumber } from './state';
 import { Board, RematchState } from './types';
 
 export const handleJoinRoom = (gameState: GameState, roomId: string, playerId: string): GameState => {
@@ -38,7 +32,7 @@ export const handleMakeMove = (gameState: GameState, roomId: string, playerId: s
     throw new Error('Invalid board state');
   }
   
-  if (!move.board.every(cell => cell === null || cell === 'X' || cell === 'O')) {
+  if (!move.board.every(cell => cell === null || cell === 'player1' || cell === 'player2')) {
     throw new Error('Invalid board values');
   }
 

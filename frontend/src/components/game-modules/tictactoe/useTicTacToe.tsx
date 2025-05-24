@@ -63,12 +63,12 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     };
 
     on("updateBoard", handleUpdateBoard);
-    on("playerSymbol", handlePlayerNumber);
+    on("playerNumber", handlePlayerNumber);
     on("gameEnd", handleGameEnd);
 
     return () => {
       off("updateBoard", handleUpdateBoard);
-      off("playerSymbol", handlePlayerNumber);
+      off("playerNumber", handlePlayerNumber);
       off("gameEnd", handleGameEnd);
     };
   }, [on, off, setBoard]);

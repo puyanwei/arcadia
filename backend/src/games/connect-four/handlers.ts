@@ -1,8 +1,8 @@
 import { GameHandler, GameState, GameRoom } from '../index';
 import { Server, Socket } from 'socket.io';
-import { checkWinner, getLowestEmptyCellInColumn, assignPlayerNumber, getPlayerNumber } from './state';
+import { checkWinner, assignPlayerNumber, getPlayerNumber } from './state';
 import { RematchState } from '../tictactoe/types';
-import { ConnectFourCell, ConnectFourBoard, PlayerNumber } from './types';
+import { ConnectFourBoard, PlayerNumber } from './types';
 
 export const handleJoinRoom = (gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> => {
   let room = gameState.rooms.get(roomId);
