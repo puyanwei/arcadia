@@ -111,6 +111,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   return {
     ...gameState,
     ...roomState,
+    gameStatus: gameState.gameStarted || gameState.gameFinished ? gameState.gameStatus : roomState.gameStatus,
     makeMove,
     joinRoom,
     playAgain,
