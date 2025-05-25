@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { assignPlayerNumber, checkWinnerTTT } from './state';
+import { assignPlayerNumber, checkWinner } from './state';
 import { Board, RematchState, PlayerNumber, GameRooms } from '../../shared/types';
 
 type HandleMoveParams = {
@@ -27,7 +27,7 @@ export function handleMove({ gameRooms, roomId, playerNumber, move, socket, io }
   room.board = move.board;
   socket.to(roomId).emit("updateBoard", move.board);
   
-  const result = checkWinnerTTT(move.board);
+  const result = checkWinner(move.board);
   if (!result) return { newGameRooms: gameRooms };
 
   if (result === 'draw') {
@@ -49,7 +49,7 @@ export function handleMove({ gameRooms, roomId, playerNumber, move, socket, io }
   return { newGameRooms: gameRooms };
 }
 
-export function handlePlayAgainTTT(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
+export function handlePlayAgain(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
   const room = gameRooms.rooms[roomId];
   if (!room) throw new Error('Room not found');
 
@@ -57,7 +57,7 @@ export function handlePlayAgainTTT(gameRooms: GameRooms, roomId: string, playerI
   return gameRooms;
 }
 
-export function handleRematchTTT(
+export function handleRematch(
   gameRooms: GameRooms,
   roomId: string,
   playerId: string,
@@ -79,7 +79,7 @@ export function handleRematchTTT(
   }
 
   if (currentRematchState.requestedBy !== playerId) {
-    const newGameRooms = handlePlayAgainTTT(gameRooms, roomId, playerId);
+    const newGameRooms = handlePlayAgain(gameRooms, roomId, playerId);
     const shouldSwapFirst = Math.random() < 0.5;
     
     io.to(roomId).emit("updateBoard", Array(9).fill(null));
@@ -91,7 +91,7 @@ export function handleRematchTTT(
   return { newGameRooms: gameRooms };
 }
 
-export function handleDisconnectTTT(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
+export function handleDisconnect(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
   const room = gameRooms.rooms[roomId];
   if (!room) return gameRooms;
 
@@ -103,7 +103,7 @@ export function handleDisconnectTTT(gameRooms: GameRooms, roomId: string, player
   return gameRooms;
 }
 
-export function emitGameStateTTT(io: Server, gameRooms: GameRooms, roomId: string): void {
+export function emitGameState(io: Server, gameRooms: GameRooms, roomId: string): void {
   const room = gameRooms.rooms[roomId];
   if (room) {
     io.to(roomId).emit("playerJoined", room.players.length);
