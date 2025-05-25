@@ -29,11 +29,17 @@ export async function onJoinRoom({ data, gameStates, socket, io }: JoinRoomParam
         players: [],
         board: Array(9).fill(null)
       };
+      console.log(`[onJoinRoom] Created new room: ${roomId}`);
     }
 
-    checkIfRoomIsFull(room, socket);
+    if (room.players.length >= 2) {
+      console.log(`[onJoinRoom] Room ${roomId} is full. Player ${socket.id} denied.`);
+      socket.emit("error", "Room is full");
+      return;
+    }
 
     room.players.push(socket.id);
+    console.log(`[onJoinRoom] Player ${socket.id} joined room ${roomId}. Players now: ${room.players.length}`);
     gameRooms.rooms[roomId] = room;
     
     const { currentPlayer, otherPlayer } = assignPlayerNumber(room, gameRooms, socket.id);
@@ -43,6 +49,7 @@ export async function onJoinRoom({ data, gameStates, socket, io }: JoinRoomParam
     io.to(roomId).emit("playerJoined", room.players.length);
     
     if (room.players.length === 2) {
+      console.log(`[onJoinRoom] Room ${roomId} now has 2 players. Emitting gameStart.`);
       io.to(roomId).emit("gameStart", true);
     }
   } catch (error) {

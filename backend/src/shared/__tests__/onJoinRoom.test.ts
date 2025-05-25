@@ -84,4 +84,25 @@ describe('onJoinRoom', () => {
       otherPlayer: 'player1'
     })
   })
+
+  it('should not allow more than 2 players in a room', async () => {
+    // Setup room with two players
+    gameStates.tictactoe.rooms['room1'] = {
+      id: 'room1',
+      players: ['socket1', 'socket2'],
+      board: Array(9).fill(null)
+    };
+    gameStates.tictactoe.playerNumbers['socket1'] = 'player1';
+    gameStates.tictactoe.playerNumbers['socket2'] = 'player2';
+
+    await onJoinRoom({
+      data: { gameType: 'tictactoe', roomId: 'room1', playerNumber: 'player1' },
+      socket: mockSocket,
+      io: mockIo,
+      gameStates
+    });
+
+    expect(mockSocket.emit).toHaveBeenCalledWith('error', 'Room is full');
+    expect(gameStates.tictactoe.rooms['room1'].players.length).toBe(2);
+  });
 }) 

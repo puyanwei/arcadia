@@ -4,20 +4,21 @@ import { useState } from "react";
 import { useTicTacToe } from "./useTicTacToe";
 
 export function TicTacToe() {
-  const { 
-    board, 
-    isMyTurn, 
+  console.log("TEST LOG: TicTacToe component rendered");
+  const {
+    board,
+    isMyTurn,
     gameStarted,
     gameFinished,
     gameStatus,
     rematchStatus,
-    makeMove, 
-    joinRoom, 
+    makeMove,
+    joinRoom,
     playAgain,
-    roomId 
+    roomId,
   } = useTicTacToe();
 
-  const [inputRoomId, setInputRoomId] = useState('');
+  const [inputRoomId, setInputRoomId] = useState("");
 
   const handleMove = (index: number) => {
     if (roomId) makeMove(index, roomId);
@@ -65,11 +66,13 @@ export function TicTacToe() {
               onClick={() => handleMove(index)}
               disabled={!isMyTurn || cell !== null}
               className={`w-20 h-20 text-4xl font-bold border-2 rounded-lg
-                ${cell === 'player1' ? 'text-blue-600' : 'text-red-600'}
-                ${isMyTurn && !cell ? 'hover:bg-gray-100' : 'cursor-not-allowed'}
-                ${cell ? 'border-gray-300' : 'border-gray-400'}`}
+                ${cell === "player1" ? "text-blue-600" : "text-red-600"}
+                ${
+                  isMyTurn && !cell ? "hover:bg-gray-100" : "cursor-not-allowed"
+                }
+                ${cell ? "border-gray-300" : "border-gray-400"}`}
             >
-              {cell === 'player1' ? 'X' : cell === 'player2' ? 'O' : ''}
+              {cell === "player1" ? "X" : cell === "player2" ? "O" : ""}
             </button>
           ))}
         </div>
@@ -79,13 +82,15 @@ export function TicTacToe() {
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={handlePlayAgain}
-            disabled={rematchStatus === 'pending'}
+            disabled={rematchStatus === "pending"}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
           >
-            {rematchStatus === 'pending' ? 'Waiting for opponent...' : 'Play Again'}
+            {rematchStatus === "pending"
+              ? "Waiting for opponent..."
+              : "Play Again"}
           </button>
         </div>
       )}
     </div>
   );
-} 
+}
