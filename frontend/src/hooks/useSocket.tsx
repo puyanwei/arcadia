@@ -6,7 +6,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { io, Socket } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 import { GameRoomEventHandlerMap, GameRoomEventName } from "./useGameRoom";
 
 // Context type
@@ -32,28 +32,32 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
-    const socket = io(url);
-    socketRef.current = socket;
+    // Dynamically import socket.io-client only on the client
+    let socket: Socket | null = null;
+    import("socket.io-client").then(({ io }) => {
+      const url = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+      socket = io(url);
+      socketRef.current = socket;
 
-    socket.on("connect", () => {
-      console.log("[Socket] Connected with id:", socket.id, "to", url);
-      setIsConnected(true);
-      setConnectionError(null);
-    });
+      socket.on("connect", () => {
+        console.log("[Socket] Connected with id:", socket.id, "to", url);
+        setIsConnected(true);
+        setConnectionError(null);
+      });
 
-    socket.on("disconnect", () => {
-      console.log("[Socket] Disconnected");
-      setIsConnected(false);
-    });
+      socket.on("disconnect", () => {
+        console.log("[Socket] Disconnected");
+        setIsConnected(false);
+      });
 
-    socket.on("connect_error", (error) => {
-      console.error("[Socket] Connection error:", error);
-      setConnectionError(error.message);
+      socket.on("connect_error", (error) => {
+        console.error("[Socket] Connection error:", error);
+        setConnectionError(error.message);
+      });
     });
 
     return () => {
-      socket.disconnect();
+      socket?.disconnect();
     };
   }, []);
 
