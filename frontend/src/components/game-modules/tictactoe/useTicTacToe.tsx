@@ -24,7 +24,6 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   });
 
   useEffect(() => {
-    console.log("[useTicTacToe] Registering all event handlers");
     on("gameStart", handleGameStart);
     on("updateBoard", handleUpdateBoard);
     on("playerNumber", handlePlayerNumber);
@@ -34,7 +33,9 @@ export function useTicTacToe(): UseTicTacToeReturnType {
 
     if (socket) {
       socket.onAny((event, ...args) => {
-        console.log("[Socket] Received event:", event, args);
+        if (event === "gameStart") {
+          console.log("[Socket] Received event: gameStart", args);
+        }
       });
     }
 
@@ -93,7 +94,6 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   function handleGameStart() {
-    console.log("[handleGameStart] called");
     setGameState((prev) => {
       if (!prev.playerNumber) {
         console.log("[handleGameStart] No playerNumber");
@@ -174,9 +174,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   function joinRoomWithLog(roomId: string) {
-    console.log("[joinRoom] Emitting joinRoom for roomId:", roomId);
     if (socket) {
-      console.log(`[onJoinRoom] Socket ${socket.id}`);
     }
     joinRoom(roomId);
   }

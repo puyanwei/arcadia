@@ -50,7 +50,7 @@ export function TicTacToe() {
         <div className="w-full max-w-xs">
           <div className="flex flex-col gap-2">
             <input
-              className="border p-2 rounded-lg"
+              className="border p-2 rounded-lg text-black"
               placeholder="Enter Room ID"
               value={inputRoomId}
               onChange={(e) => setInputRoomId(e.target.value)}
