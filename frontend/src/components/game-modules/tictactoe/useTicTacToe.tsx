@@ -71,10 +71,12 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     };
 
     const handleGameStart = () => {
-      console.log("[handleGameStart]");
+      console.log("[handleGameStart] called");
       setGameState((prev) => {
-        if (!prev.playerNumber)
+        if (!prev.playerNumber) {
+          console.log("[handleGameStart] No playerNumber");
           return { ...prev, gameStarted: true, gameFinished: false };
+        }
         const xCount = prev.board.filter((cell) => cell === "player1").length;
         const oCount = prev.board.filter((cell) => cell === "player2").length;
         const myTurn =
@@ -133,6 +135,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     on("updateBoard", handleUpdateBoard);
     on("playerNumber", handlePlayerNumber);
     on("gameStart", handleGameStart);
+    console.log("Registered gameStart handler");
     on("playerJoined", handlePlayerJoined);
     on("gameEnd", handleGameEnd);
     on("rematchState", handleRematchState);
