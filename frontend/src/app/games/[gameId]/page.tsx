@@ -1,8 +1,9 @@
 "use client";
 
 import { useParams } from 'next/navigation';
-import TicTacToe from '@/components/game-modules/tictactoe/TicTacToe';
-import ConnectFour from '@/components/game-modules/connect-four/ConnectFour';
+import {TicTacToe} from '@/components/game-modules/tictactoe/TicTacToe';
+import { ConnectFour } from '@/components/game-modules/connect-four/ConnectFour';
+
 type GameComponents = Record<string, React.ComponentType>;
 
 const gameComponents: GameComponents = {

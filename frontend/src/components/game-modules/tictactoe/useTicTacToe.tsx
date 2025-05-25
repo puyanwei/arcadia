@@ -32,7 +32,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         ...prev,
         playerNumber: number,
         isMyTurn: number === 'player1',
-        gameStatus: `You are ${number === 'player1' ? 'X' : 'O'}. ${number === 'player1' ? "It's your turn!" : "Waiting for X to move..."}`
+        gameStatus: number === 'player1' ? "You're X - make your first move!" : "You're O - waiting for X to move..."
       }));
     };
 
@@ -41,7 +41,15 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         ...prev,
         gameStarted: true,
         gameFinished: false,
-        gameStatus: prev.playerNumber === 'player1' ? "It's your turn!" : "Waiting for X to move..."
+        gameStatus: prev.playerNumber === 'player1' ? "You're X - make your first move!" : "You're O - waiting for X to move..."
+      }));
+    };
+
+    const handlePlayerJoined = (count: number) => {
+      setGameState(prev => ({
+        ...prev,
+        playersInRoom: count,
+        gameStatus: count === 2 ? "Game starting..." : "Waiting for opponent..."
       }));
     };
 
@@ -66,6 +74,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     on("updateBoard", handleUpdateBoard);
     on("playerNumber", handlePlayerNumber);
     on("gameStart", handleGameStart);
+    on("playerJoined", handlePlayerJoined);
     on("gameEnd", handleGameEnd);
     on("rematchState", handleRematchState);
 
@@ -73,6 +82,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       off("updateBoard", handleUpdateBoard);
       off("playerNumber", handlePlayerNumber);
       off("gameStart", handleGameStart);
+      off("playerJoined", handlePlayerJoined);
       off("gameEnd", handleGameEnd);
       off("rematchState", handleRematchState);
     };

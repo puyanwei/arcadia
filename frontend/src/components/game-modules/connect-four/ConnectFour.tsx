@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useConnectFour } from './useConnectFour';
 import { ConnectFourCell } from './types';
 
-export default function ConnectFour() {
+export function ConnectFour() {
   const {
     playerNumber,
     isMyTurn,
