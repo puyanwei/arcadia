@@ -48,7 +48,11 @@ export async function onJoinRoom({ data, gameStates, socket, io }: JoinRoomParam
     socket.emit("playerNumber", { currentPlayer, otherPlayer });
     io.to(roomId).emit("playerJoined", room.players.length);
     
+    checkIfRoomIsFull(room, socket);
+
     if (room.players.length === 2) {
+      const sockets = await io.in(roomId).allSockets();
+      console.log(`[onJoinRoom] Sockets in room ${roomId}:`, Array.from(sockets));
       console.log(`[onJoinRoom] Room ${roomId} now has 2 players. Emitting gameStart.`);
       io.to(roomId).emit("gameStart", true);
     }
