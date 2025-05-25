@@ -6,7 +6,7 @@
     "node": "18.x"
   },
   "scripts": {
-    "test": "vitest",
+    "test": "vitest --reporter=verbose",
     "start": "node dist/server.js",
     "build": "tsc",
     "postinstall": "npm run build",
