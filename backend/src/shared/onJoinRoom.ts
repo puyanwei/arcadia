@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import { checkIfGameExists } from "../games/shared-handlers";
-import { GameRoom, GameRooms, GameType, PlayerNumber, SocketHandlerParams } from "./types";
+import { GameRoom, GameRooms, PlayerNumber, SocketHandlerParams } from "./types";
 
 export async function onJoinRoom({ data, gameStates, socket, io }: SocketHandlerParams) {
   try {
@@ -29,7 +29,7 @@ export async function onJoinRoom({ data, gameStates, socket, io }: SocketHandler
     room.players.push(socket.id);
     gameRooms.rooms[roomId] = room;
     
-    const { currentPlayer, otherPlayer } = assignPlayerNumber(room, gameRooms, socket);
+    const { currentPlayer, otherPlayer } = assignPlayerNumber(room, gameRooms, socket.id);
 
     socket.join(roomId);
     socket.emit("playerNumber", { currentPlayer, otherPlayer });
@@ -51,7 +51,7 @@ function checkIfRoomIsFull(room: GameRoom, socket: Socket) {
   return 
 }
 
-function assignPlayerNumber(room: GameRoom, gameRooms: GameRooms, socket: Socket): { currentPlayer: PlayerNumber, otherPlayer: PlayerNumber | null } {
+function assignPlayerNumber(room: GameRoom, gameRooms: GameRooms, socketId: string): { currentPlayer: PlayerNumber, otherPlayer: PlayerNumber | null } {
   let currentPlayer: PlayerNumber;
   let otherPlayer: PlayerNumber | null = null;
 
@@ -63,6 +63,6 @@ function assignPlayerNumber(room: GameRoom, gameRooms: GameRooms, socket: Socket
     otherPlayer = firstPlayerNumber;
   }
   
-  gameRooms.playerNumbers[socket.id] = currentPlayer;
+  gameRooms.playerNumbers[socketId] = currentPlayer;
   return { currentPlayer, otherPlayer };
 }
