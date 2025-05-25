@@ -23,27 +23,30 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     rematchStatus: null,
   });
 
-  useEffect(
-    function registerSocketHandlers() {
-      console.log("[useTicTacToe] Registering all event handlers");
-      on("updateBoard", handleUpdateBoard);
-      on("playerNumber", handlePlayerNumber);
-      on("gameStart", handleGameStart);
-      on("playerJoined", handlePlayerJoined);
-      on("gameEnd", handleGameEnd);
-      on("rematchState", handleRematchState);
+  useEffect(() => {
+    console.log("[useTicTacToe] Registering all event handlers");
+    on("gameStart", handleGameStart);
+    on("updateBoard", handleUpdateBoard);
+    on("playerNumber", handlePlayerNumber);
+    on("playerJoined", handlePlayerJoined);
+    on("gameEnd", handleGameEnd);
+    on("rematchState", handleRematchState);
 
-      return function cleanupSocketHandlers() {
-        off("updateBoard", handleUpdateBoard);
-        off("playerNumber", handlePlayerNumber);
-        off("gameStart", handleGameStart);
-        off("playerJoined", handlePlayerJoined);
-        off("gameEnd", handleGameEnd);
-        off("rematchState", handleRematchState);
-      };
-    },
-    [on, off]
-  );
+    if (socket) {
+      socket.onAny((event, ...args) => {
+        console.log("[Socket] Received event:", event, args);
+      });
+    }
+
+    return () => {
+      off("updateBoard", handleUpdateBoard);
+      off("playerNumber", handlePlayerNumber);
+      off("gameStart", handleGameStart);
+      off("playerJoined", handlePlayerJoined);
+      off("gameEnd", handleGameEnd);
+      off("rematchState", handleRematchState);
+    };
+  }, [on, off]);
 
   function handleUpdateBoard(newBoard: Board) {
     console.log("[handleUpdateBoard] newBoard:", newBoard);
@@ -172,6 +175,9 @@ export function useTicTacToe(): UseTicTacToeReturnType {
 
   function joinRoomWithLog(roomId: string) {
     console.log("[joinRoom] Emitting joinRoom for roomId:", roomId);
+    if (socket) {
+      console.log(`[onJoinRoom] Socket ${socket.id}`);
+    }
     joinRoom(roomId);
   }
 
