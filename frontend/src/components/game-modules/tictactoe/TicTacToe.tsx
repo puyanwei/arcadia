@@ -19,6 +19,9 @@ export function TicTacToe() {
     isConnected,
   } = useTicTacToe();
 
+  console.log("gameStarted", gameStarted);
+  console.log("gameFinished", gameFinished);
+
   const [inputRoomId, setInputRoomId] = useState("");
 
   const handleMove = (index: number) => {
