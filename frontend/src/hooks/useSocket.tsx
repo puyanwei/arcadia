@@ -1,3 +1,5 @@
+"use client";
+
 import React, {
   createContext,
   useContext,
@@ -40,7 +42,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       socketRef.current = socket;
 
       socket.on("connect", () => {
-        console.log("[Socket] Connected with id:", socket.id, "to", url);
+        if (socket) {
+          console.log("[Socket] Connected with id:", socket.id, "to", url);
+        }
         setIsConnected(true);
         setConnectionError(null);
       });
