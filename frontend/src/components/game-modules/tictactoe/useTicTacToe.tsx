@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useTicTacToeGameStore } from '@/store/game';
+import { useState, useEffect } from 'react';
 import { useSocket } from '@/hooks/useSocket';
-import { GameRoomState, useGameRoom } from '@/hooks/useGameRoom';
-import { GameState, GameActions, Board } from './types';
-
-type PlayerNumber = 'player1' | 'player2';
-type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & { isConnected: boolean, connectionError: string | null };
+import { useGameRoom } from '@/hooks/useGameRoom';
+import { Board, GameState, UseTicTacToeReturnType } from './types';
 
 export function useTicTacToe(): UseTicTacToeReturnType {
   const { socket, on, off, isConnected, connectionError } = useSocket();
-  const { board, setBoard } = useTicTacToeGameStore();
   const { roomState, joinRoom, playAgain } = useGameRoom('tictactoe');
   const [gameState, setGameState] = useState<GameState>({
     board: Array(9).fill(null),
@@ -24,30 +19,29 @@ export function useTicTacToe(): UseTicTacToeReturnType {
 
   useEffect(() => {
     const handleUpdateBoard = (newBoard: Board) => {
-      setBoard(newBoard);
-      setGameState(prev => {
-        if (prev.gameFinished) {
-          return {
-            ...prev,
-            board: newBoard
-          };
-        }
-        return {
-          ...prev,
-          board: newBoard,
-          isMyTurn: true,
-          gameStatus: "Your turn!"
-        };
-      });
+      setGameState(prev => ({
+        ...prev,
+        board: newBoard,
+        isMyTurn: !prev.isMyTurn,
+        gameStatus: prev.isMyTurn ? "Waiting for opponent's move..." : "Your turn!"
+      }));
     };
 
-    const handlePlayerNumber = (number: 'player1' | 'player2' | 'X' | 'O' | 'yellow' | 'red') => {
-      if (number !== 'player1' && number !== 'player2') return;
+    const handlePlayerNumber = (number: 'player1' | 'player2') => {
       setGameState(prev => ({
         ...prev,
         playerNumber: number,
         isMyTurn: number === 'player1',
         gameStatus: `You are ${number === 'player1' ? 'X' : 'O'}. ${number === 'player1' ? "It's your turn!" : "Waiting for X to move..."}`
+      }));
+    };
+
+    const handleGameStart = () => {
+      setGameState(prev => ({
+        ...prev,
+        gameStarted: true,
+        gameFinished: false,
+        gameStatus: prev.playerNumber === 'player1' ? "It's your turn!" : "Waiting for X to move..."
       }));
     };
 
@@ -57,42 +51,45 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         gameStarted: false,
         gameFinished: true,
         gameStatus: message,
-        isMyTurn: false,
-        board: prev.board
+        isMyTurn: false
+      }));
+    };
+
+    const handleRematchState = ({ status, message }: { status: string, message: string }) => {
+      setGameState(prev => ({
+        ...prev,
+        rematchStatus: status,
+        gameStatus: message
       }));
     };
 
     on("updateBoard", handleUpdateBoard);
     on("playerNumber", handlePlayerNumber);
+    on("gameStart", handleGameStart);
     on("gameEnd", handleGameEnd);
+    on("rematchState", handleRematchState);
 
     return () => {
       off("updateBoard", handleUpdateBoard);
       off("playerNumber", handlePlayerNumber);
+      off("gameStart", handleGameStart);
       off("gameEnd", handleGameEnd);
+      off("rematchState", handleRematchState);
     };
-  }, [on, off, setBoard]);
+  }, [on, off]);
 
   function makeMove(index: number, roomId: string) {
-    if (!gameState.gameStarted) {
-      setGameState(prev => ({
-        ...prev,
-        gameStatus: "Waiting for another player to join..."
-      }));
-      return;
-    }
-    if (!board[index] && gameState.isMyTurn && gameState.playerNumber) {
-      const newBoard = [...board];
-      newBoard[index] = gameState.playerNumber;
-      setBoard(newBoard);
-      setGameState(prev => ({
-        ...prev,
-        board: newBoard,
-        isMyTurn: false,
-        gameStatus: "Waiting for opponent's move..."
-      }));
-      socket?.emit("makeMove", { gameType: 'tictactoe', roomId, board: newBoard });
-    }
+    if (!gameState.gameStarted || !gameState.isMyTurn || gameState.board[index]) return;
+    
+    const newBoard = [...gameState.board];
+    newBoard[index] = gameState.playerNumber;
+    
+    socket?.emit("move", { 
+      gameType: 'tictactoe', 
+      roomId, 
+      board: newBoard,
+      playerNumber: gameState.playerNumber 
+    });
   }
 
   return {

@@ -1,4 +1,6 @@
-export type RematchStatus = 'pending' | 'accepted' | 'rejected' | null;
+import { GameRoomState } from '@/hooks/useGameRoom';
+
+export type RematchStatus = 'pending' | 'accepted' | null;
 
 export type Board = (string | null)[];
 
@@ -17,4 +19,9 @@ export type GameActions = {
   makeMove: (index: number, roomId: string) => void;
   joinRoom: (roomId: string) => void;
   playAgain: (roomId: string) => void;
+};
+
+export type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & { 
+  isConnected: boolean;
+  connectionError: string | null;
 }; 

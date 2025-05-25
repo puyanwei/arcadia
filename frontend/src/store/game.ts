@@ -27,15 +27,7 @@ type GridBoard = {
   boardGrid: Grid;
 }
 
-const { tictactoe, 'connect-four': connectFourGrid } = boardGrid;
-
-export const useTicTacToeGameStore = create<GridBoard>((set) => ({
-  board: createBoard(tictactoe.columns, tictactoe.rows),
-  setBoard: (board) => set({ board }),
-  currentPlayer: 'X',
-  setCurrentPlayer: (player) => set({ currentPlayer: player }),
-  boardGrid: tictactoe
-})); 
+const { 'connect-four': connectFourGrid } = boardGrid;
 
 export const useConnectFourGameStore = create<GridBoard>((set) => ({
   board: createBoard(connectFourGrid.columns, connectFourGrid.rows),
