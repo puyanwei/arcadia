@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSocket } from '@/hooks/useSocket';
-import { useGameRoom, RematchStatus } from '@/hooks/useGameRoom';
+import { useGameRoom, RematchStatus, PlayerNumber } from '@/hooks/useGameRoom';
 import { Board, GameState, UseTicTacToeReturnType } from './types';
 
 export function useTicTacToe(): UseTicTacToeReturnType {
@@ -27,12 +27,14 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       }));
     };
 
-    const handlePlayerNumber = (number: 'player1' | 'player2') => {
+    const handlePlayerNumber = (number: PlayerNumber) => {
       setGameState(prev => ({
         ...prev,
         playerNumber: number,
         isMyTurn: number === 'player1',
-        gameStatus: number === 'player1' ? "You're X - make your first move!" : "You're O - waiting for X to move..."
+        gameStatus: number === 'player1' 
+          ? "You're X - you go first!" 
+          : "You're O - waiting for X to make the first move..."
       }));
     };
 
@@ -41,7 +43,9 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         ...prev,
         gameStarted: true,
         gameFinished: false,
-        gameStatus: prev.playerNumber === 'player1' ? "You're X - make your first move!" : "You're O - waiting for X to move..."
+        gameStatus: prev.playerNumber === 'player1' 
+          ? "You're X - make your first move!" 
+          : "You're O - waiting for X to make the first move..."
       }));
     };
 
@@ -49,7 +53,9 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       setGameState(prev => ({
         ...prev,
         playersInRoom: count,
-        gameStatus: count === 2 ? "Game starting..." : "Waiting for opponent..."
+        gameStatus: count === 2 
+          ? "Game starting..." 
+          : "Waiting for opponent..."
       }));
     };
 

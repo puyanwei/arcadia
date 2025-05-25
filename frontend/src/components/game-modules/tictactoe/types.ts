@@ -1,10 +1,12 @@
 import { GameRoomState, RematchStatus } from '@/hooks/useGameRoom';
 
-export type Board = (string | null)[];
+export type PlayerNumber = 'player1' | 'player2';
+
+export type Board = (PlayerNumber | null)[];
 
 export type GameState = {
   board: Board;
-  playerNumber: 'player1' | 'player2' | null;
+  playerNumber: PlayerNumber | null;
   isMyTurn: boolean;
   playersInRoom: number;
   gameStarted: boolean;
@@ -22,4 +24,5 @@ export type GameActions = {
 export type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & { 
   isConnected: boolean;
   connectionError: string | null;
+  roomId: string;
 }; 
