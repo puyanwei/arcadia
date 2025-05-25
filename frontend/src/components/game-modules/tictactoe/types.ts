@@ -25,4 +25,7 @@ export type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & {
   isConnected: boolean;
   connectionError: string | null;
   roomId: string;
-}; 
+};
+
+export type GameEndEventData = { winner: string; message: string }; 
+export type RematchStatusEventData = { status: RematchStatus; message: string };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSocket } from '@/hooks/useSocket';
 import { useGameRoom, RematchStatus, PlayerNumber } from '@/hooks/useGameRoom';
-import { Board, GameState, UseTicTacToeReturnType } from './types';
+import { Board, GameEndEventData, GameState, RematchStatusEventData, UseTicTacToeReturnType } from './types';
 
 export function useTicTacToe(): UseTicTacToeReturnType {
   const { socket, on, off, isConnected, connectionError } = useSocket();
@@ -27,13 +27,13 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       }));
     };
 
-    const handlePlayerNumber = (number: PlayerNumber) => {
+    const handlePlayerNumber = (data: { currentPlayer: PlayerNumber, otherPlayer: PlayerNumber | null }) => {
       setGameState(prev => ({
         ...prev,
-        playerNumber: number,
-        isMyTurn: number === 'player1',
-        gameStatus: number === 'player1' 
-          ? "You're X - you go first!" 
+        playerNumber: data.currentPlayer,
+        isMyTurn: data.currentPlayer === 'player1',
+        gameStatus: data.currentPlayer === 'player1'
+          ? "You're X - you go first!"
           : "You're O - waiting for X to make the first move..."
       }));
     };
@@ -59,7 +59,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       }));
     };
 
-    const handleGameEnd = ({ winner, message }: { winner: string, message: string }) => {
+    const handleGameEnd = ({ winner, message }: GameEndEventData) => {
       setGameState(prev => ({
         ...prev,
         gameStarted: false,
@@ -69,7 +69,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       }));
     };
 
-    const handleRematchState = ({ status, message }: { status: RematchStatus, message: string }) => {
+    const handleRematchState = ({ status, message }: RematchStatusEventData) => {
       setGameState(prev => ({
         ...prev,
         rematchStatus: status,

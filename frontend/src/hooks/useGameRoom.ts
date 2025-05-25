@@ -18,7 +18,8 @@ export type RoomFullEventHandler = () => void;
 export type PlayerLeftEventHandler = (message: string) => void;
 export type RematchStateEventHandler = (payload: { status: RematchStatus; message: string }) => void;
 export type GameStartEventHandler = () => void;
-export type PlayerNumberEventHandler = (number: PlayerNumber) => void;
+export type PlayerNumberEventData = { currentPlayer: PlayerNumber; otherPlayer: PlayerNumber | null };
+export type PlayerNumberEventHandler = (data: PlayerNumberEventData) => void;
 
 // Event map
 export type GameRoomEventHandlerMap = {
@@ -78,7 +79,7 @@ export function useGameRoom(gameType: string) {
     setRoomState(prev => ({ ...prev, gameStarted: true, rematchStatus: null }));
   }, []);
 
-  const handlePlayerNumber: PlayerNumberEventHandler = useCallback((number) => {
+  const handlePlayerNumber: PlayerNumberEventHandler = useCallback((data) => {
     // Implementation needed
   }, []);
 
