@@ -104,11 +104,13 @@ export function handleDisconnect(gameRooms: GameRooms, roomId: string, playerId:
   return gameRooms;
 }
 
-export function emitGameState(io: Server, gameRooms: GameRooms, roomId: string): void {
+export async function emitGameState(io: Server, gameRooms: GameRooms, roomId: string): Promise<void> {
   const room = gameRooms.rooms[roomId];
   if (room) {
     io.to(roomId).emit("playerJoined", room.players.length);
     if (room.players.length === 2) {
+      const sockets = await io.in(roomId).allSockets();
+      console.log(`[emitGameState] Sockets in room ${roomId}:`, Array.from(sockets));
       console.log(`[emitGameState] Emitting gameStart to room: ${roomId}`);
       io.to(roomId).emit("gameStart", true);
     }
