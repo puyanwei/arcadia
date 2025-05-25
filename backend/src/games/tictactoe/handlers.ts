@@ -115,4 +115,4 @@ export async function emitGameState(io: Server, gameRooms: GameRooms, roomId: st
       io.to(roomId).emit("gameStart", true);
     }
   }
-} 
+}
