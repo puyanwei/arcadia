@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSocket } from '@/hooks/useSocket';
-import { useGameRoom } from '@/hooks/useGameRoom';
+import { useGameRoom, RematchStatus } from '@/hooks/useGameRoom';
 import { Board, GameState, UseTicTacToeReturnType } from './types';
 
 export function useTicTacToe(): UseTicTacToeReturnType {
@@ -55,7 +55,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       }));
     };
 
-    const handleRematchState = ({ status, message }: { status: string, message: string }) => {
+    const handleRematchState = ({ status, message }: { status: RematchStatus, message: string }) => {
       setGameState(prev => ({
         ...prev,
         rematchStatus: status,

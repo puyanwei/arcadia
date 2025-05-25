@@ -21,7 +21,7 @@ export type RematchState = {
 export type GameRoom = {
   id: string;
   players: string[];
-  board: Board;
+  board: Board | ConnectFourBoard | TicTacToeBoard;
   rematchState?: RematchState;
 };
 

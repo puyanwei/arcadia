@@ -4,7 +4,10 @@
     "rootDir": "./src",
     "module": "CommonJS",
     "target": "ES6",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

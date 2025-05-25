@@ -1,6 +1,4 @@
-import { GameRoomState } from '@/hooks/useGameRoom';
-
-export type RematchStatus = 'pending' | 'accepted' | null;
+import { GameRoomState, RematchStatus } from '@/hooks/useGameRoom';
 
 export type Board = (string | null)[];
 

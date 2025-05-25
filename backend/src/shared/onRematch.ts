@@ -2,6 +2,7 @@ import { SocketHandlerParams } from "./types";
 import { RematchState } from "./types";
 
 export function onRematch({ data, socket, io, gameStates }: SocketHandlerParams) {
+    if (!data) return;
     const { gameType, roomId } = data;
     const gameRooms = gameStates[gameType];
     if (!gameRooms) {

@@ -1,18 +1,10 @@
-import {  GameState, GameRoom } from '../gameMapper';
 import { Server, Socket } from 'socket.io';
 import { assignPlayerNumber } from './state';
-import { ConnectFourBoard, PlayerNumber } from '../../shared/types';
+import { ConnectFourBoard, GameRoom, PlayerNumber, GameRooms } from '../../shared/types';
 import { RematchState } from '../../shared/types';
 
-export function createInitialStateCF(): GameState<PlayerNumber> {
-  return {
-    rooms: new Map<string, GameRoom>(),
-    playerNumbers: new Map<string, PlayerNumber>()
-  };
-}
-
-export function handleJoinRoomCF(gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> {
-  let room = gameState.rooms.get(roomId);
+export function handleJoinRoomCF(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
+  let room = gameRooms.rooms[roomId];
   if (!room) {
     room = {
       id: roomId,
@@ -26,13 +18,13 @@ export function handleJoinRoomCF(gameState: GameState<PlayerNumber>, roomId: str
   }
 
   room.players.push(playerId);
-  gameState.rooms.set(roomId, room);
-  assignPlayerNumber(gameState, room, playerId);
-  return gameState;
+  gameRooms.rooms[roomId] = room;
+  assignPlayerNumber(gameRooms, room, playerId);
+  return gameRooms;
 };
 
-export function handleMakeMoveCF(gameState: GameState<PlayerNumber>, roomId: string, playerId: string, move: { board: ConnectFourBoard }): GameState<PlayerNumber> {
-  const room = gameState.rooms.get(roomId);
+export function handleMakeMoveCF(gameRooms: GameRooms, roomId: string, playerId: string, move: { board: ConnectFourBoard }): GameRooms {
+  const room = gameRooms.rooms[roomId];
   if (!room) throw new Error('Room not found');
   
   // Validate board
@@ -45,25 +37,25 @@ export function handleMakeMoveCF(gameState: GameState<PlayerNumber>, roomId: str
   }
 
   room.board = move.board;
-  return gameState;
+  return gameRooms;
 };
 
-export function handlePlayAgainCF(gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> {
-  const room = gameState.rooms.get(roomId);
+export function handlePlayAgainCF(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
+  const room = gameRooms.rooms[roomId];
   if (!room) throw new Error('Room not found');
 
   room.board = Array(42).fill('valid') as ConnectFourBoard;
-  return gameState;
+  return gameRooms;
 };
 
 export function handleRematchCF(
-  gameState: GameState<PlayerNumber>,
+  gameRooms: GameRooms,
   roomId: string,
   playerId: string,
   currentRematchState: RematchState | undefined,
   socket: Socket,
   io: Server
-): { newGameState: GameState<PlayerNumber>; newRematchState?: RematchState } {
+): { newGameRooms: GameRooms; newRematchState?: RematchState } {
   if (!currentRematchState) {
     const newRematchState: RematchState = {
       requested: true,
@@ -74,29 +66,29 @@ export function handleRematchCF(
     socket.emit("rematchState", { status: "waiting", message: "Waiting for opponent to accept..." });
     socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!" });
     
-    return { newGameState: gameState, newRematchState };
+    return { newGameRooms: gameRooms, newRematchState };
   }
 
   if (currentRematchState.requestedBy !== playerId) {
-    const newGameState = handlePlayAgainCF(gameState, roomId, playerId);
+    const newGameRooms = handlePlayAgainCF(gameRooms, roomId, playerId);
     
     io.to(roomId).emit("updateBoard", Array(42).fill('valid') as ConnectFourBoard);
     io.to(roomId).emit("gameStart", true);
     
-    return { newGameState };
+    return { newGameRooms };
   }
 
-  return { newGameState: gameState };
+  return { newGameRooms: gameRooms };
 };
 
-export function handleDisconnectCF(gameState: GameState<PlayerNumber>, roomId: string, playerId: string): GameState<PlayerNumber> {
-  const room = gameState.rooms.get(roomId);
-  if (!room) return gameState;
+export function handleDisconnectCF(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
+  const room = gameRooms.rooms[roomId];
+  if (!room) return gameRooms;
 
-  room.players = room.players.filter(id => id !== playerId);
+  room.players = room.players.filter((id: string) => id !== playerId);
   if (room.players.length === 0) {
-    gameState.rooms.delete(roomId);
+    delete gameRooms.rooms[roomId];
   }
-  gameState.playerNumbers.delete(playerId);
-  return gameState;
+  delete gameRooms.playerNumbers[playerId];
+  return gameRooms;
 };

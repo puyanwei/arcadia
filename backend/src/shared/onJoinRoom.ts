@@ -1,8 +1,16 @@
-import { Socket } from "socket.io";
-import { GameRoom, GameRooms, GameType, PlayerNumber, SocketHandlerParams } from "./types";
+import { Socket, Server } from "socket.io";
+import { GameRoom, GameRooms, GameType, PlayerNumber, ClientData } from "./types";
 
-export async function onJoinRoom({ data, gameStates, socket, io }: SocketHandlerParams) {
+type JoinRoomParams = {
+  data: ClientData;
+  gameStates: Record<string, GameRooms>;
+  socket: Socket;
+  io: Server;
+}
+
+export async function onJoinRoom({ data, gameStates, socket, io }: JoinRoomParams) {
   try {
+    if (!data) return;
     const { gameType, roomId } = data;
     await checkIfGameExists(gameType, gameStates, socket);
 

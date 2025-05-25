@@ -1,15 +1,14 @@
-import { GameState, GameRoom } from '../gameMapper';
-import { ConnectFourCell, ConnectFourBoard, PlayerNumber } from '../../shared/types';
+import { GameRooms, GameRoom, PlayerNumber, ConnectFourCell, ConnectFourBoard } from '../../shared/types';
 
-export function createInitialStateCF(): GameState<PlayerNumber> {
+export function createInitialStateCF(): GameRooms {
   return {
-    rooms: new Map<string, GameRoom>(),
-    playerNumbers: new Map<string, PlayerNumber>()
+    rooms: {},
+    playerNumbers: {}
   };
 }
 
-export function getPlayerRoom(gameState: GameState<PlayerNumber>, playerId: string): GameRoom | undefined {
-  for (const room of gameState.rooms.values()) {
+export function getPlayerRoom(gameRooms: GameRooms, playerId: string): GameRoom | undefined {
+  for (const room of Object.values(gameRooms.rooms)) {
     if (room.players.includes(playerId)) {
       return room;
     }
@@ -17,11 +16,11 @@ export function getPlayerRoom(gameState: GameState<PlayerNumber>, playerId: stri
   return undefined;
 }
 
-export function assignPlayerNumber(gameState: GameState<PlayerNumber>, room: GameRoom, playerId: string): void {
+export function assignPlayerNumber(gameRooms: GameRooms, room: GameRoom, playerId: string): void {
   if (room.players.length === 1) {
-    gameState.playerNumbers.set(playerId, 'player1');
+    gameRooms.playerNumbers[playerId] = 'player1';
   } else if (room.players.length === 2) {
-    gameState.playerNumbers.set(playerId, 'player2');
+    gameRooms.playerNumbers[playerId] = 'player2';
   }
 }
 
