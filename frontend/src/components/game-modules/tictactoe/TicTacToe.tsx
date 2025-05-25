@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTicTacToe } from "./useTicTacToe";
 
 export function TicTacToe() {
@@ -16,12 +17,18 @@ export function TicTacToe() {
     roomId 
   } = useTicTacToe();
 
+  const [inputRoomId, setInputRoomId] = useState('');
+
   const handleMove = (index: number) => {
     if (roomId) makeMove(index, roomId);
   };
 
   const handlePlayAgain = () => {
     if (roomId) playAgain(roomId);
+  };
+
+  const handleJoinGame = () => {
+    if (inputRoomId) joinRoom(inputRoomId);
   };
 
   return (
@@ -37,11 +44,11 @@ export function TicTacToe() {
             <input
               className="border p-2 rounded-lg"
               placeholder="Enter Room ID"
-              value={roomId}
-              onChange={(e) => joinRoom(e.target.value)}
+              value={inputRoomId}
+              onChange={(e) => setInputRoomId(e.target.value)}
             />
             <button
-              onClick={() => joinRoom(roomId)}
+              onClick={handleJoinGame}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               Join Game
