@@ -2,26 +2,6 @@ import { Server, Socket } from 'socket.io';
 import { assignPlayerNumber, checkWinnerTTT } from './state';
 import { Board, RematchState, PlayerNumber, GameRooms } from '../../shared/types';
 
-export function handleJoinRoomTTT(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
-  let room = gameRooms.rooms[roomId];
-  if (!room) {
-    room = {
-      id: roomId,
-      players: [],
-      board: Array(9).fill(null)
-    };
-  }
-
-  if (room.players.length >= 2) {
-    throw new Error('Room is full');
-  }
-
-  room.players.push(playerId);
-  gameRooms.rooms[roomId] = room;
-  assignPlayerNumber(gameRooms, room, playerId);
-  return gameRooms;
-}
-
 type HandleMoveParams = {
   gameRooms: GameRooms;
   roomId: string;

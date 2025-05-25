@@ -1,4 +1,3 @@
-
 import express from "express";
 import { createServer } from "http";
 import { Server, Socket } from "socket.io";
@@ -8,6 +7,8 @@ import {  OverallGameState, ClientData } from './shared/types';
 import { handleMove } from "./games/tictactoe/handlers";
 import { onJoinRoom } from "./shared/onJoinRoom";
 import { onDisconnect } from "./shared/onDisconnect";
+import { onRematch } from "./shared/onRematch";
+import { onMove } from "./shared/onMove";
 
 dotenv.config();
 
@@ -81,17 +82,9 @@ const io = new Server(httpServer, {
 io.on("connection", (socket: Socket) => {
   console.log("User connected:", socket.id);
   socket.on("joinRoom", (data: ClientData) => onJoinRoom({ data, gameStates, socket, io }));
-  // socket.on("playAgain", (data: SocketHandlerData) => onPlayAgain({ data, socket, io, gameStates, rematchStates }));
+  socket.on("rematch", (data: ClientData) => onRematch({ data, socket, io, gameStates }));
   socket.on("disconnect", () => onDisconnect({ socket, io, gameStates }));
-  // Tic Tac Toe
-  socket.on("ticTacToe:move", (data: ClientData) => handleMove({ 
-    gameRooms: gameStates.tictactoe,
-    roomId: data.roomId,
-    playerNumber: data.playerNumber,
-    move: { board: data.board },
-    socket,
-    io
-  }));
+  socket.on("move", (data: ClientData) => onMove({ data, gameStates, socket, io }));
 });
 
 httpServer.listen(PORT, HOST, () => {

@@ -11,10 +11,18 @@ export type Board = (PlayerNumber | null)[];
 
 export type OverallGameState = Record<GameType, GameRooms>
 
+export type RematchStatus = "waiting" | "pending" | null;
+export type RematchState = {
+  requested: boolean;
+  requestedBy: string;
+  status: "waiting" | "pending" | "accepted" | "rejected";
+}; 
+
 export type GameRoom = {
   id: string;
   players: string[];
   board: Board;
+  rematchState?: RematchState;
 };
 
 export type GameRooms = {
@@ -28,12 +36,6 @@ export type GameResult = {
   message: string;
 }
 export type Cell = (string | null)
-export type RematchStatus = "waiting" | "pending" | null;
-export type RematchState = {
-  requested: boolean;
-  requestedBy: string;
-  status: "waiting" | "pending" | "accepted" | "rejected";
-}; 
 
 export type ClientData = { gameType: GameType, roomId: string, playerNumber: PlayerNumber, board?: any };
 
@@ -42,14 +44,12 @@ export type SocketHandlerParams = {
   io: Server;
   gameStates: Record<string, GameRooms>;
   emitGameState?: Function;
-  rematchStates?: Record<string, RematchState>;
   data?: ClientData;
 };
 
 // Connect Four
 export type ConnectFourCell = Prettify<PlayerNumber | 'invalid' | 'valid'>
 export type ConnectFourBoard = ConnectFourCell[];
-
 
 // Tic Tac Toe
 export type TicTacToeCell = Prettify<PlayerNumber | 'invalid' | 'valid'>

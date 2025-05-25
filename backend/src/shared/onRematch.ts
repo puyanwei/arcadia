@@ -1,0 +1,38 @@
+import { SocketHandlerParams } from "./types";
+import { RematchState } from "./types";
+
+export function onRematch({ data, socket, io, gameStates }: SocketHandlerParams) {
+    const { gameType, roomId } = data;
+    const gameRooms = gameStates[gameType];
+    if (!gameRooms) {
+      socket.emit("error", "Game state not found");
+      return;
+    }
+    const room = gameRooms.rooms[roomId];
+    if (!room) return;
+  
+    const currentRematchState = room.rematchState;
+    if (!currentRematchState) {
+      const newRematchState: RematchState = {
+        requested: true,
+        requestedBy: socket.id,
+        status: "waiting"
+      };
+      
+      socket.emit("rematchState", { status: "waiting", message: "Waiting for opponent to accept..." });
+      socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!" });
+      
+      room.rematchState = newRematchState;
+      return;
+    }
+  
+    if (currentRematchState.requestedBy !== socket.id) {
+      room.board = Array(9).fill(null);
+      const shouldSwapFirst = Math.random() < 0.5;
+      
+      io.to(roomId).emit("updateBoard", Array(9).fill(null));
+      io.to(roomId).emit("gameStart", shouldSwapFirst);
+      
+      room.rematchState = undefined;
+    }
+}

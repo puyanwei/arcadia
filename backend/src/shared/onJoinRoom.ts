@@ -1,6 +1,5 @@
 import { Socket } from "socket.io";
-import { checkIfGameExists } from "../games/shared-handlers";
-import { GameRoom, GameRooms, PlayerNumber, SocketHandlerParams } from "./types";
+import { GameRoom, GameRooms, GameType, PlayerNumber, SocketHandlerParams } from "./types";
 
 export async function onJoinRoom({ data, gameStates, socket, io }: SocketHandlerParams) {
   try {
@@ -65,4 +64,29 @@ function assignPlayerNumber(room: GameRoom, gameRooms: GameRooms, socketId: stri
   
   gameRooms.playerNumbers[socketId] = currentPlayer;
   return { currentPlayer, otherPlayer };
+}
+
+export function getPlayerRoom(gameRooms: GameRooms, playerId: string): GameRoom | null {
+  for (const room of Object.values(gameRooms.rooms)) {
+    if (room.players.includes(playerId)) {
+      return room;
+    }
+  }
+  return null;
+};
+
+export function validateGameType(gameType: string): gameType is GameType {
+  return gameType === 'tictactoe' || gameType === 'connect-four';
+}
+
+export function checkIfGameExists(gameType: GameType, gameStates: Record<string, GameRooms>, socket: Socket) {
+  if (!validateGameType(gameType)) {
+    socket.emit("error", "Invalid game type");
+    return;
+  }
+  const gameRooms = gameStates[gameType];
+  if (!gameRooms) {
+    socket.emit("error", "Game states not found");
+    return;
+  }
 }

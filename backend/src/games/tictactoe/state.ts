@@ -27,14 +27,7 @@ function shuffleNumbers(): ["player1", "player2"] | ["player2", "player1"] {
   return Math.random() < 0.5 ? ["player1", "player2"] : ["player2", "player1"];
 }
 
-export const getPlayerRoom = (gameRooms: GameRooms, playerId: string): GameRoom | null => {
-  for (const room of Object.values(gameRooms.rooms)) {
-    if (room.players.includes(playerId)) {
-      return room;
-    }
-  }
-  return null;
-};
+
 
 export const assignPlayerNumber = (gameRooms: GameRooms, room: GameRoom, playerId: string): PlayerNumber => {
   let number: PlayerNumber;
