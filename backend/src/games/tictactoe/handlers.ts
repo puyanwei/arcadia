@@ -1,10 +1,9 @@
-import { GameState } from '../gameMapper';
 import { Server, Socket } from 'socket.io';
-import { assignPlayerNumber } from './state';
-import { Board, RematchState } from '../types';
+import { assignPlayerNumber, checkWinnerTTT } from './state';
+import { Board, RematchState, PlayerNumber, GameRooms } from '../../shared/types';
 
-export function handleJoinRoomTTT(gameState: GameState, roomId: string, playerId: string): GameState {
-  let room = gameState.rooms.get(roomId);
+export function handleJoinRoomTTT(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
+  let room = gameRooms.rooms[roomId];
   if (!room) {
     room = {
       id: roomId,
@@ -18,13 +17,22 @@ export function handleJoinRoomTTT(gameState: GameState, roomId: string, playerId
   }
 
   room.players.push(playerId);
-  gameState.rooms.set(roomId, room);
-  assignPlayerNumber(gameState, room, playerId);
-  return gameState;
-};
+  gameRooms.rooms[roomId] = room;
+  assignPlayerNumber(gameRooms, room, playerId);
+  return gameRooms;
+}
 
-export function handleMakeMoveTTT(gameState: GameState, roomId: string, playerId: string, move: { board: Board }): GameState {
-  const room = gameState.rooms.get(roomId);
+type HandleMoveParams = {
+  gameRooms: GameRooms;
+  roomId: string;
+  playerNumber: PlayerNumber;
+  move: { board: Board };
+  socket: Socket;
+  io: Server;
+}
+
+export function handleMove({ gameRooms, roomId, playerNumber, move, socket, io }: HandleMoveParams): { newGameRooms: GameRooms } {
+  const room = gameRooms.rooms[roomId];
   if (!room) throw new Error('Room not found');
   
   // Validate board
@@ -37,25 +45,46 @@ export function handleMakeMoveTTT(gameState: GameState, roomId: string, playerId
   }
 
   room.board = move.board;
-  return gameState;
-};
+  socket.to(roomId).emit("updateBoard", move.board);
+  
+  const result = checkWinnerTTT(move.board);
+  if (!result) return { newGameRooms: gameRooms };
 
-export function handlePlayAgainTTT(gameState: GameState, roomId: string, playerId: string): GameState {
-  const room = gameState.rooms.get(roomId);
+  if (result === 'draw') {
+    io.to(roomId).emit("gameEnd", { 
+      winner: 'draw', 
+      message: 'Game ended in a draw!'
+    });
+  } else {
+    room.players.forEach(playerId => {
+      const playerNumber = gameRooms.playerNumbers[playerId];
+      const isWinner = playerNumber === result;
+      io.to(playerId).emit("gameEnd", {
+        winner: result,
+        message: isWinner ? "You won!" : "You lost!"
+      });
+    });
+  }
+
+  return { newGameRooms: gameRooms };
+}
+
+export function handlePlayAgainTTT(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
+  const room = gameRooms.rooms[roomId];
   if (!room) throw new Error('Room not found');
 
   room.board = Array(9).fill(null);
-  return gameState;
-};
+  return gameRooms;
+}
 
 export function handleRematchTTT(
-  gameState: GameState,
+  gameRooms: GameRooms,
   roomId: string,
   playerId: string,
   currentRematchState: RematchState | undefined,
   socket: Socket,
   io: Server
-): { newGameState: GameState; newRematchState?: RematchState } {
+): { newGameRooms: GameRooms; newRematchState?: RematchState } {
   if (!currentRematchState) {
     const newRematchState: RematchState = {
       requested: true,
@@ -66,40 +95,40 @@ export function handleRematchTTT(
     socket.emit("rematchState", { status: "waiting", message: "Waiting for opponent to accept..." });
     socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!" });
     
-    return { newGameState: gameState, newRematchState };
+    return { newGameRooms: gameRooms, newRematchState };
   }
 
   if (currentRematchState.requestedBy !== playerId) {
-    const newGameState = handlePlayAgainTTT(gameState, roomId, playerId);
+    const newGameRooms = handlePlayAgainTTT(gameRooms, roomId, playerId);
     const shouldSwapFirst = Math.random() < 0.5;
     
     io.to(roomId).emit("updateBoard", Array(9).fill(null));
     io.to(roomId).emit("gameStart", shouldSwapFirst);
     
-    return { newGameState };
+    return { newGameRooms };
   }
 
-  return { newGameState: gameState };
-};
+  return { newGameRooms: gameRooms };
+}
 
-export function handleDisconnectTTT(gameState: GameState, roomId: string, playerId: string): GameState {
-  const room = gameState.rooms.get(roomId);
-  if (!room) return gameState;
+export function handleDisconnectTTT(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
+  const room = gameRooms.rooms[roomId];
+  if (!room) return gameRooms;
 
   room.players = room.players.filter(id => id !== playerId);
   if (room.players.length === 0) {
-    gameState.rooms.delete(roomId);
+    delete gameRooms.rooms[roomId];
   }
-  gameState.playerNumbers.delete(playerId);
-  return gameState;
-};
+  delete gameRooms.playerNumbers[playerId];
+  return gameRooms;
+}
 
-export function emitGameStateTTT(io: Server, gameState: GameState, roomId: string): void {
-  const room = gameState.rooms.get(roomId);
+export function emitGameStateTTT(io: Server, gameRooms: GameRooms, roomId: string): void {
+  const room = gameRooms.rooms[roomId];
   if (room) {
     io.to(roomId).emit("playerJoined", room.players.length);
     if (room.players.length === 2) {
       io.to(roomId).emit("gameStart", true);
     }
   }
-}; 
+} 

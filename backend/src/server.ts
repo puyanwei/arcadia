@@ -3,11 +3,16 @@ import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
-import { gameHandlers } from './games/gameMapper';
-import { RematchState } from './games/types';
-import { onDisconnect, onJoinRoom, onMakeMove, onPlayAgain } from "./games/shared-handlers";
+import { RematchState, GameRooms, OverallGameState } from './shared/types';
+import { onDisconnect, onJoinRoom, onPlayAgain, ClientData } from "./games/shared-handlers";
+import { handleMove } from "./games/tictactoe/handlers";
 
 dotenv.config();
+
+const gameStates: OverallGameState = {
+  tictactoe: { rooms: {}, playerNumbers: {} },
+  'connect-four': { rooms: {}, playerNumbers: {} }
+};
 
 // Environment variable validation
 const requiredEnvVars = {
@@ -45,21 +50,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize game states and rematch states
-const gameStates = new Map(
-  Object.entries(gameHandlers).map(([gameType, handler]) => [
-    gameType,
-    handler.createInitialState()
-  ])
-);
-const rematchStates = new Map<string, RematchState>();
-
 app.get('/', (req, res) => {
   res.json({ 
     status: 'Server is running',
     rooms: {
-      tictactoe: gameStates.get('tictactoe')?.rooms.size || 0,
-      'connect-four': gameStates.get('connect-four')?.rooms.size || 0
+      tictactoe: Object.keys(gameStates.tictactoe.rooms).length,
+      'connect-four': Object.keys(gameStates['connect-four'].rooms).length
     }
   });
 });
@@ -82,10 +78,18 @@ const io = new Server(httpServer, {
 
 io.on("connection", (socket: Socket) => {
   console.log("User connected:", socket.id);
-  socket.on("joinRoom", (data) => onJoinRoom({ data, socket, io, gameStates, gameHandlers }));
-  socket.on("playAgain", (data) => onPlayAgain({ data, socket, io, gameStates, gameHandlers, rematchStates }));
-  socket.on("makeMove", (data) => onMakeMove({ data, socket, io, gameStates, gameHandlers }));
-  socket.on("disconnect", () => onDisconnect({ socket, io, gameStates, gameHandlers, rematchStates }));
+  socket.on("joinRoom", (data: SocketHandlerData) => onJoinRoom({ data, gameStates, socket, io }));
+  // socket.on("playAgain", (data: SocketHandlerData) => onPlayAgain({ data, socket, io, gameStates, rematchStates }));
+  // socket.on("disconnect", () => onDisconnect({ socket, io, gameStates, rematchStates }));
+  // Tic Tac Toe
+  socket.on("ticTacToe:move", (data: ClientData) => handleMove({ 
+    gameRooms: gameStates.tictactoe,
+    roomId: data.roomId,
+    playerNumber: data.playerNumber,
+    move: { board: data.board },
+    socket,
+    io
+  }));
 });
 
 httpServer.listen(PORT, HOST, () => {

@@ -1,133 +1,122 @@
 import { Socket, Server } from "socket.io";
-import { GameHandler, gameHandlers, GameState, GameType } from "./gameMapper";
 import { getPlayerRoom } from "./tictactoe/state";
-import { RematchState, PlayerNumber } from "./types";
+import { RematchState, PlayerNumber, GameType, GameRooms, ClientData } from "../shared/types";
+import { handleMove } from "./tictactoe/handlers";
   
-  type SocketHandlerParams = {
-    socket: Socket;
-    io: Server;
-    gameStates: Map<string, GameState>;
-    gameHandlers: Record<string, GameHandler>;
-    emitGameState?: Function;
-    rematchStates?: Map<string, RematchState>;
-    data?: SocketHandlerData;
-  };
-  
-  type SocketHandlerData = { gameType: GameType, roomId: string, board?: any };
-  
-  export function onJoinRoom({ data, socket, io, gameStates, gameHandlers }: SocketHandlerParams) {
-    const { gameType, roomId } = data;
-    if (!validateGameType(gameType)) {
-      socket.emit("error", "Invalid game type");
-      return;
-    }
-    const handler = gameHandlers[gameType];
-    if (!handler) {
-      socket.emit("error", "Invalid game handler");
-      return;
-    }
-    try {
-      const gameState = gameStates.get(gameType);
-      if (!gameState) {
-        socket.emit("error", "Game state not found");
-        return;
-      }
-      const newGameState = handler.handleJoinRoom(gameState, roomId, socket.id);
-      gameStates.set(gameType, newGameState);
-      socket.join(roomId);
-      const playerNumber = getPlayerNumber(newGameState, socket.id);
-      if (playerNumber) {
-        socket.emit("playerNumber", playerNumber);
-      }
-    } catch (error) {
-      socket.emit("error", error.message);
-    }
+
+
+
+
+export function onMove({ data, socket, io, gameStates }: SocketHandlerParams) {
+  const { gameType, roomId, playerNumber, board } = data;
+  const gameRooms = gameStates[gameType];
+  if (!gameRooms) {
+    socket.emit("error", "Game state not found");
+    return;
+  }
+  const room = getPlayerRoom(gameRooms, socket.id);
+  if (!room || room.id !== roomId) {
+    socket.emit("error", "You are not in this room");
+    return;
   }
 
-  export function onPlayAgain({ data, socket, io, gameStates, gameHandlers, rematchStates }: SocketHandlerParams) {
-    const { gameType, roomId } = data;
-    const gameState = gameStates.get(gameType);
-    if (!gameState) {
-      socket.emit("error", "Game state not found");
-      return;
+  if (gameType === 'tictactoe') {
+    return handleMove({ gameRooms, roomId, playerNumber, move: { board }, socket, io });
+  }
+  throw new Error("Invalid game type");
+}
+
+export function onDisconnect({ socket, io, gameStates, rematchStates }: SocketHandlerParams) {
+  console.log("User disconnected:", socket.id);
+  for (const [gameType, gameRooms] of Object.entries(gameStates)) {
+    const room = getPlayerRoom(gameRooms, socket.id);
+    if (!room) continue;
+    if (rematchStates) {
+      delete rematchStates[room.id];
     }
-    const room = gameState.rooms.get(roomId);
-    if (!room) return;
-    const currentRematchState = rematchStates?.get(roomId);
-    const { newGameState, newRematchState } = gameHandlers[gameType].handleRematch(
-      gameState,
-      roomId,
-      socket.id,
-      currentRematchState,
-      socket,
-      io
-    );
-    gameStates.set(gameType, newGameState);
-    if (newRematchState) {
-      rematchStates?.set(roomId, newRematchState);
-    } else {
-      rematchStates?.delete(roomId);
+
+    room.players = room.players.filter(id => id !== socket.id);
+    if (room.players.length === 0) {
+      delete gameRooms.rooms[room.id];
+    }
+    delete gameRooms.playerNumbers[socket.id];
+
+    if (gameRooms.rooms[room.id]) {
+      io.to(room.id).emit("playerLeft", "Opponent left the game");
+      io.to(room.id).emit("gameEnd", { winner: 'disconnect', message: "Opponent left the game" });
     }
   }
-  
-  export function onMakeMove({ data, socket, io, gameStates, gameHandlers }: SocketHandlerParams) {
-    const { gameType, roomId, board } = data;
-    const room = getPlayerRoom(gameStates.get(gameType)!, socket.id);
-    if (!room || room.id !== roomId) {
-      socket.emit("error", "You are not in this room");
-      return;
-    }
-    const handler = gameHandlers[gameType];
-    if (!handler) {
-      socket.emit("error", "Game not found");
-      return;
-    }
-    const newGameState = handler.handleMakeMove(gameStates.get(gameType)!, roomId, socket.id, { board });
-    gameStates.set(gameType, newGameState);
-    socket.to(roomId).emit("updateBoard", board);
+}
+
+export function onPlayAgain({ data, socket, io, gameStates, rematchStates }: SocketHandlerParams) {
+  const { gameType, roomId } = data;
+  const gameRooms = gameStates[gameType];
+  if (!gameRooms) {
+    socket.emit("error", "Game state not found");
+    return;
+  }
+  const room = gameRooms.rooms[roomId];
+  if (!room) return;
+
+  const currentRematchState = rematchStates?.[roomId];
+  if (!currentRematchState) {
+    const newRematchState: RematchState = {
+      requested: true,
+      requestedBy: socket.id,
+      status: "waiting"
+    };
     
-    const result = handler.checkGameResult(board);
-    if (!result) return;
-  
-    if (result.type === 'draw') {
-      io.to(roomId).emit("gameEnd", { 
-        winner: 'draw', 
-        message: result.message
-      });
-    } else {
-      room.players.forEach(playerId => {
-        const playerNumber = handler.getPlayerNumber(gameStates.get(gameType)!, playerId);
-        const isWinner = playerNumber === result.winner;
-        io.to(playerId).emit("gameEnd", {
-          winner: result.winner,
-          message: isWinner ? "You won!" : "You lost!"
-        });
-      });
+    socket.emit("rematchState", { status: "waiting", message: "Waiting for opponent to accept..." });
+    socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!" });
+    
+    if (rematchStates) {
+      rematchStates[roomId] = newRematchState;
+    }
+    return;
+  }
+
+  if (currentRematchState.requestedBy !== socket.id) {
+    room.board = Array(9).fill(null);
+    const shouldSwapFirst = Math.random() < 0.5;
+    
+    io.to(roomId).emit("updateBoard", Array(9).fill(null));
+    io.to(roomId).emit("gameStart", shouldSwapFirst);
+    
+    if (rematchStates) {
+      delete rematchStates[roomId];
     }
   }
-  
-  export function onDisconnect({ socket, io, gameStates, gameHandlers, rematchStates }: SocketHandlerParams) {
-    console.log("User disconnected:", socket.id);
-    for (const [gameType, gameState] of gameStates.entries()) {
-      const room = getPlayerRoom(gameState, socket.id);
-      if (!room) continue;
-      rematchStates?.delete(room.id);
-      const handler = gameHandlers[gameType];
-      if (!handler) continue;
-      const newGameState = handler.handleDisconnect(gameState, room.id, socket.id);
-      gameStates.set(gameType, newGameState);
-      if (gameStates.get(gameType)!.rooms.has(room.id)) {
-            io.to(room.id).emit("playerLeft", "Opponent left the game");
-            io.to(room.id).emit("gameEnd", { winner: 'disconnect', message: "Opponent left the game" });
-          }
-    }
+}
+
+export function checkIfPlayerIsInRoom(gameType: GameType, gameStates: Record<string, GameRooms>, socket: Socket, roomId: string) {
+  const gameRooms = gameStates[gameType];
+  if (!gameRooms) {
+    socket.emit("error", "Game state not found");
+    return;
   }
-
-  export function getPlayerNumber(gameState: GameState, playerId: string): PlayerNumber | null {
-    return gameState.playerNumbers.get(playerId) || null;
-  };
-
-  function validateGameType(gameType: string): gameType is GameType {
-    return gameType in gameHandlers;
+  const room = getPlayerRoom(gameRooms, socket.id);
+  if (!room || room.id !== roomId) {
+    socket.emit("error", "You are not in this room");
+    return;
   }
+}
 
+export function getPlayerNumber(gameRooms: GameRooms, playerId: string): PlayerNumber | null {
+  return gameRooms.playerNumbers[playerId] || null;
+}
+
+export function validateGameType(gameType: string): gameType is GameType {
+  return gameType === 'tictactoe' || gameType === 'connect-four';
+}
+
+export function checkIfGameExists(gameType: GameType, gameStates: Record<string, GameRooms>, socket: Socket) {
+  if (!validateGameType(gameType)) {
+    socket.emit("error", "Invalid game type");
+    return;
+  }
+  const gameRooms = gameStates[gameType];
+  if (!gameRooms) {
+    socket.emit("error", "Game states not found");
+    return;
+  }
+}

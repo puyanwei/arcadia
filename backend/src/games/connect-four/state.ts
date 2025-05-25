@@ -1,5 +1,5 @@
 import { GameState, GameRoom } from '../gameMapper';
-import { ConnectFourCell, ConnectFourBoard, PlayerNumber } from '../types';
+import { ConnectFourCell, ConnectFourBoard, PlayerNumber } from '../../shared/types';
 
 export function createInitialStateCF(): GameState<PlayerNumber> {
   return {

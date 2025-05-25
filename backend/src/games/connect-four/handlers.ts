@@ -1,8 +1,8 @@
 import {  GameState, GameRoom } from '../gameMapper';
 import { Server, Socket } from 'socket.io';
 import { assignPlayerNumber } from './state';
-import { ConnectFourBoard, PlayerNumber } from '../types';
-import { RematchState } from '../types';
+import { ConnectFourBoard, PlayerNumber } from '../../shared/types';
+import { RematchState } from '../../shared/types';
 
 export function createInitialStateCF(): GameState<PlayerNumber> {
   return {
