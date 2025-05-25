@@ -25,6 +25,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
 
   useEffect(
     function registerSocketHandlers() {
+      console.log("[useTicTacToe] Registering all event handlers");
       on("updateBoard", handleUpdateBoard);
       on("playerNumber", handlePlayerNumber);
       on("gameStart", handleGameStart);
@@ -169,6 +170,11 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     });
   }
 
+  function joinRoomWithLog(roomId: string) {
+    console.log("[joinRoom] Emitting joinRoom for roomId:", roomId);
+    joinRoom(roomId);
+  }
+
   return {
     ...roomState,
     ...gameState,
@@ -177,7 +183,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         ? gameState.gameStatus
         : roomState.gameStatus,
     makeMove,
-    joinRoom,
+    joinRoom: joinRoomWithLog,
     playAgain,
     isConnected,
     connectionError,

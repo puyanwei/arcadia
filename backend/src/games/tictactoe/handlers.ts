@@ -11,7 +11,7 @@ type HandleMoveParams = {
   io: Server;
 }
 
-export function handleMove({ gameRooms, roomId, playerNumber, move, socket, io }: HandleMoveParams): { newGameRooms: GameRooms } {
+export function handleMove({ gameRooms, roomId, move, socket, io }: HandleMoveParams): { newGameRooms: GameRooms } {
   const room = gameRooms.rooms[roomId];
   if (!room) throw new Error('Room not found');
   
@@ -83,6 +83,7 @@ export function handleRematch(
     const shouldSwapFirst = Math.random() < 0.5;
     
     io.to(roomId).emit("updateBoard", Array(9).fill(null));
+    console.log(`[handleRematch] Emitting gameStart to room: ${roomId}, shouldSwapFirst:`, shouldSwapFirst);
     io.to(roomId).emit("gameStart", shouldSwapFirst);
     
     return { newGameRooms };
@@ -108,6 +109,7 @@ export function emitGameState(io: Server, gameRooms: GameRooms, roomId: string):
   if (room) {
     io.to(roomId).emit("playerJoined", room.players.length);
     if (room.players.length === 2) {
+      console.log(`[emitGameState] Emitting gameStart to room: ${roomId}`);
       io.to(roomId).emit("gameStart", true);
     }
   }

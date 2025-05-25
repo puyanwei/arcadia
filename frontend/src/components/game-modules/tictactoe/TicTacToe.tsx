@@ -16,6 +16,7 @@ export function TicTacToe() {
     joinRoom,
     playAgain,
     roomId,
+    isConnected,
   } = useTicTacToe();
 
   const [inputRoomId, setInputRoomId] = useState("");
@@ -29,7 +30,13 @@ export function TicTacToe() {
   };
 
   const handleJoinGame = () => {
-    if (inputRoomId) joinRoom(inputRoomId);
+    if (inputRoomId && isConnected) {
+      console.log(
+        "[handleJoinGame] Emitting joinRoom for roomId:",
+        inputRoomId
+      );
+      joinRoom(inputRoomId);
+    }
   };
 
   return (
@@ -51,6 +58,7 @@ export function TicTacToe() {
             <button
               onClick={handleJoinGame}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              disabled={!isConnected}
             >
               Join Game
             </button>
