@@ -3,13 +3,14 @@ import { boardGrid } from "@/store/game";
 import { useSocket } from "@/hooks/useSocket";
 import { useGameRoom } from "@/hooks/useGameRoom";
 import { ConnectFourCell, GameState, GameActions } from "./types";
+import { GameEndEventData } from "../tictactoe/types";
 
 type UseConnectFourReturnType = GameState &
   GameActions & { isConnected: boolean; connectionError: string | null };
 
 export function useConnectFour(): UseConnectFourReturnType {
   const { socket, on, off, isConnected, connectionError } = useSocket();
-  const { roomState, joinRoom, playAgain } = useGameRoom("connect-four");
+  const { roomState, joinRoom, rematch } = useGameRoom("connect-four");
   const columns = boardGrid["connect-four"].columns;
   const rows = boardGrid["connect-four"].rows;
   const [gameState, setGameState] = useState<GameState>({
@@ -150,13 +151,7 @@ export function useConnectFour(): UseConnectFourReturnType {
       }));
     };
 
-    const handleGameEnd = ({
-      winner,
-      message,
-    }: {
-      winner: string;
-      message: string;
-    }) => {
+    function handleGameEnd({ gameResult, message }: GameEndEventData) {
       setGameState((prev) => ({
         ...prev,
         gameStarted: false,
@@ -165,7 +160,7 @@ export function useConnectFour(): UseConnectFourReturnType {
         isMyTurn: false,
         board: prev.board,
       }));
-    };
+    }
 
     on("updateBoard", handleUpdateBoard);
     on("playerNumber", handlePlayerNumber);
@@ -221,7 +216,7 @@ export function useConnectFour(): UseConnectFourReturnType {
     ...roomState,
     makeMove,
     joinRoom,
-    playAgain,
+    rematch,
     isConnected,
     connectionError,
   };

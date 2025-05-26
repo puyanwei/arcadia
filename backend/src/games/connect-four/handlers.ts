@@ -60,7 +60,7 @@ export function handleRematchCF(
     const newRematchState: RematchState = {
       requested: true,
       requestedBy: playerId,
-      status: "waiting"
+      status: "pending"
     };
     
     socket.emit("rematchState", { status: "waiting", message: "Waiting for opponent to accept..." });

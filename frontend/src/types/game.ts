@@ -22,7 +22,7 @@ export type GameState = {
 export type GameActions = {
   makeMove: (index: number, roomId: string) => void;
   joinRoom: (roomId: string) => void;
-  playAgain: (roomId: string) => void;
+  rematch: (roomId: string) => void;
 };
 
 export type GameType = 'tictactoe' | 'connect-four';
