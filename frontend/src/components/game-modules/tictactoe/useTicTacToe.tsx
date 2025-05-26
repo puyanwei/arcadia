@@ -151,19 +151,18 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   function makeMove(index: number, roomId: string) {
-    console.log(
-      "[makeMove] index:",
-      index,
-      "roomId:",
-      roomId,
-      "gameState:",
-      gameState
-    );
     if (!gameState.gameStarted || !gameState.isMyTurn || gameState.board[index])
       return;
 
+    // Optimistically update the board
     const newBoard = [...gameState.board];
     newBoard[index] = gameState.playerNumber;
+    setGameState((prev) => ({
+      ...prev,
+      board: newBoard,
+      isMyTurn: false, // After move, it's not your turn
+      gameStatus: "Opponent's turn!",
+    }));
 
     socket?.emit("move", {
       gameType: "tictactoe",

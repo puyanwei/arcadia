@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTicTacToe } from "./useTicTacToe";
 
 export function TicTacToe() {
-  console.log("TEST LOG: TicTacToe component rendered");
   const {
     board,
     isMyTurn,
@@ -34,10 +33,6 @@ export function TicTacToe() {
 
   const handleJoinGame = () => {
     if (inputRoomId && isConnected) {
-      console.log(
-        "[handleJoinGame] Emitting joinRoom for roomId:",
-        inputRoomId
-      );
       joinRoom(inputRoomId);
     }
   };
@@ -45,8 +40,8 @@ export function TicTacToe() {
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="text-center">
-        <h2 className="text-2xl font-bold mb-2">Tic Tac Toe</h2>
-        <p className="text-gray-600">{gameStatus}</p>
+        <h2 className="text-2xl font-bold mb-2 text-white">Tic Tac Toe</h2>
+        <p className="text-gray-200">{gameStatus}</p>
       </div>
 
       {!gameStarted && !gameFinished && (
