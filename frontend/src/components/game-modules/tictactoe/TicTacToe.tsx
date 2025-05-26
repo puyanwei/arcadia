@@ -16,6 +16,7 @@ export function TicTacToe() {
     playAgain,
     roomId,
     isConnected,
+    playerNumber,
   } = useTicTacToe();
 
   const [inputRoomId, setInputRoomId] = useState("");
@@ -34,6 +35,10 @@ export function TicTacToe() {
     }
   };
 
+  const gameHasNotStarted = !gameStarted && !gameFinished;
+  const gameIsInProgress = gameStarted && !gameFinished;
+  const gameHasFinished = gameFinished;
+
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="text-center">
@@ -41,7 +46,7 @@ export function TicTacToe() {
         <p className="text-gray-200">{gameStatus}</p>
       </div>
 
-      {!gameStarted && !gameFinished && (
+      {gameHasNotStarted && (
         <div className="w-full max-w-xs">
           <div className="flex flex-col gap-2">
             <input
@@ -61,27 +66,39 @@ export function TicTacToe() {
         </div>
       )}
 
-      {gameStarted && !gameFinished && (
-        <div className="grid grid-cols-3 gap-2">
-          {board.map((cell, index) => (
-            <button
-              key={index}
-              onClick={() => handleMove(index)}
-              disabled={!isMyTurn || cell !== null}
-              className={`w-20 h-20 text-4xl font-bold border-2 rounded-lg
+      {gameIsInProgress && (
+        <div className="flex flex-col items-center gap-4">
+          {playerNumber && (
+            <p className="text-gray-200">
+              You are{" "}
+              {playerNumber === "player1" ? (
+                <span className="text-blue-500 font-extrabold">X</span>
+              ) : (
+                <span className="text-red-500 font-extrabold">O</span>
+              )}
+            </p>
+          )}
+          <div className="grid grid-cols-3 gap-2">
+            {board.map((cell, index) => (
+              <button
+                key={index}
+                onClick={() => handleMove(index)}
+                disabled={!isMyTurn || cell !== null}
+                className={`w-20 h-20 text-4xl font-bold border-2 rounded-lg
                 ${cell === "player1" ? "text-blue-600" : "text-red-600"}
                 ${
                   isMyTurn && !cell ? "hover:bg-gray-100" : "cursor-not-allowed"
                 }
                 ${cell ? "border-gray-300" : "border-gray-400"}`}
-            >
-              {cell === "player1" ? "X" : cell === "player2" ? "O" : ""}
-            </button>
-          ))}
+              >
+                {cell === "player1" ? "X" : cell === "player2" ? "O" : ""}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {gameFinished && (
+      {gameHasFinished && (
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={handlePlayAgain}
