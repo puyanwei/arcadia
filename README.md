@@ -23,3 +23,4 @@ Enjoy! Many games and features coming soon...
 
 - 17/05/25 - Refactoring to allow multiple games, mock up for Connect Four
 - 15/03/25 - Tic Tac Toe is the first game available!
+- 26/05/25 - More refactoring adjusting for more games in the future, fix for Tic Tac Toe
