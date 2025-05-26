@@ -27,7 +27,6 @@ export function handleMove({ gameRooms, roomId, move, socket, io }: HandleMovePa
   room.board = move.board;
   socket.to(roomId).emit("updateBoard", move.board);
   
-  console.log('[handleMove] Checking end of game for board:', move.board);
   const result = checkEndOfGame(move.board);
   if (!result) return { newGameRooms: gameRooms };
 

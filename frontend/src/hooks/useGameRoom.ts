@@ -10,6 +10,7 @@ export type GameRoomState = {
   playersInRoom: number;
   gameStatus: string;
   rematchStatus: RematchStatus;
+  requestedBy?: string;
   gameStarted: boolean;
 };
 
@@ -17,7 +18,7 @@ export type GameRoomState = {
 export type PlayerJoinedEventHandler = (playerCount: number) => void;
 export type RoomFullEventHandler = () => void;
 export type PlayerLeftEventHandler = (message: string) => void;
-export type RematchStateEventHandler = (payload: { status: RematchStatus; message: string }) => void;
+export type RematchStateEventHandler = (payload: { status: RematchStatus; message: string; requestedBy?: string }) => void;
 export type GameStartEventHandler = () => void;
 export type PlayerNumberEventData = { currentPlayer: PlayerNumber; otherPlayer: PlayerNumber | null };
 export type PlayerNumberEventHandler = (data: PlayerNumberEventData) => void;
@@ -71,8 +72,8 @@ export function useGameRoom(gameType: string) {
     setRoomState(prev => ({ ...prev, gameStatus: message, gameStarted: false, playersInRoom: Math.max(0, prev.playersInRoom - 1) }));
   }, []);
 
-  const handleRematchState: RematchStateEventHandler = useCallback(({ status, message }) => {
-    setRoomState(prev => ({ ...prev, rematchStatus: status, gameStatus: message }));
+  const handleRematchState: RematchStateEventHandler = useCallback(({ status, message, requestedBy }) => {
+    setRoomState(prev => ({ ...prev, rematchStatus: status, gameStatus: message, requestedBy }));
   }, []);
 
   const handleGameStart: GameStartEventHandler = useCallback(() => {
@@ -105,14 +106,13 @@ export function useGameRoom(gameType: string) {
     socket?.emit('joinRoom', { gameType, roomId });
   }, [socket, gameType]);
 
-  const playAgain = useCallback((roomId: string) => {
-    setRoomState(prev => ({ ...prev, rematchStatus: 'pending', gameStatus: 'Requesting rematch...' }));
-    socket?.emit('playAgain', { gameType, roomId });
+  const rematch = useCallback((roomId: string) => {
+    socket?.emit('rematch', { gameType, roomId });
   }, [socket, gameType]);
 
   return {
     roomState,
     joinRoom,
-    playAgain,
+    rematch,
   };
 } 

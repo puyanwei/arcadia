@@ -17,11 +17,11 @@ export function onRematch({ data, socket, io, gameStates }: SocketHandlerParams)
       const newRematchState: RematchState = {
         requested: true,
         requestedBy: socket.id,
-        status: "waiting"
+        status: "pending"
       };
       
-      socket.emit("rematchState", { status: "waiting", message: "Waiting for opponent to accept..." });
-      socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!" });
+      socket.emit("rematchState", { status: "pending", message: "Waiting for opponent to accept...", requestedBy: socket.id });
+      socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!", requestedBy: socket.id });
       
       room.rematchState = newRematchState;
       return;
@@ -34,6 +34,6 @@ export function onRematch({ data, socket, io, gameStates }: SocketHandlerParams)
       io.to(roomId).emit("updateBoard", Array(9).fill(null));
       io.to(roomId).emit("gameStart", shouldSwapFirst);
       
-      room.rematchState = undefined;
+      room.rematchState = { requested: false, requestedBy: '', status: "accepted" };
     }
 }

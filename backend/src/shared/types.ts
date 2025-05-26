@@ -11,11 +11,11 @@ export type Board = (PlayerNumber | null)[];
 
 export type OverallGameState = Record<GameType, GameRooms>
 
-export type RematchStatus = "waiting" | "pending" | null;
+export type RematchStatus = 'pending' | 'accepted' | 'rejected' | null;
 export type RematchState = {
   requested: boolean;
   requestedBy: string;
-  status: "waiting" | "pending" | "accepted" | "rejected";
+  status: RematchStatus;
 }; 
 
 export type GameRoom = {

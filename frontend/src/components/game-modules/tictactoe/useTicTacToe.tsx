@@ -11,7 +11,7 @@ import {
 
 export function useTicTacToe(): UseTicTacToeReturnType {
   const { socket, on, off, isConnected, connectionError } = useSocket();
-  const { roomState, joinRoom, playAgain } = useGameRoom("tictactoe");
+  const { roomState, joinRoom, rematch } = useGameRoom("tictactoe");
   const [gameState, setGameState] = useState<GameState>({
     board: Array(9).fill(null),
     playerNumber: null,
@@ -155,7 +155,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         : roomState.gameStatus,
     makeMove,
     joinRoom: joinRoomWithLog,
-    playAgain,
+    rematch,
     isConnected,
     connectionError,
   };
