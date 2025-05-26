@@ -31,14 +31,6 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     on("gameEnd", handleGameEnd);
     on("rematchState", handleRematchState);
 
-    if (socket) {
-      socket.onAny((event, ...args) => {
-        if (event === "gameStart") {
-          console.log("[Socket] Received event: gameStart", args);
-        }
-      });
-    }
-
     return () => {
       off("updateBoard", handleUpdateBoard);
       off("playerNumber", handlePlayerNumber);
@@ -50,24 +42,12 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }, [on, off]);
 
   function handleUpdateBoard(newBoard: Board) {
-    console.log("[handleUpdateBoard] newBoard:", newBoard);
     setGameState((prev) => {
-      if (!prev.playerNumber) {
-        console.log("[handleUpdateBoard] No playerNumber, just updating board");
-        return { ...prev, board: newBoard };
-      }
+      if (!prev.playerNumber) return { ...prev, board: newBoard };
       const xCount = newBoard.filter((cell) => cell === "player1").length;
       const oCount = newBoard.filter((cell) => cell === "player2").length;
       const myTurn =
         prev.playerNumber === "player1" ? xCount === oCount : xCount > oCount;
-      console.log(
-        "[handleUpdateBoard] xCount:",
-        xCount,
-        "oCount:",
-        oCount,
-        "myTurn:",
-        myTurn
-      );
       return {
         ...prev,
         board: newBoard,
@@ -81,7 +61,6 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     currentPlayer: PlayerNumber;
     otherPlayer: PlayerNumber | null;
   }) {
-    console.log("[handlePlayerNumber] data:", data);
     setGameState((prev) => ({
       ...prev,
       playerNumber: data.currentPlayer,
@@ -96,21 +75,12 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   function handleGameStart() {
     setGameState((prev) => {
       if (!prev.playerNumber) {
-        console.log("[handleGameStart] No playerNumber");
         return { ...prev, gameStarted: true, gameFinished: false };
       }
       const xCount = prev.board.filter((cell) => cell === "player1").length;
       const oCount = prev.board.filter((cell) => cell === "player2").length;
       const myTurn =
         prev.playerNumber === "player1" ? xCount === oCount : xCount > oCount;
-      console.log(
-        "[handleGameStart] xCount:",
-        xCount,
-        "oCount:",
-        oCount,
-        "myTurn:",
-        myTurn
-      );
       return {
         ...prev,
         gameStarted: true,
@@ -122,7 +92,6 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   function handlePlayerJoined(count: number) {
-    console.log("[handlePlayerJoined] count:", count);
     setGameState((prev) => ({
       ...prev,
       playersInRoom: count,
@@ -131,7 +100,6 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   function handleGameEnd({ winner, message }: GameEndEventData) {
-    console.log("[handleGameEnd] winner:", winner, "message:", message);
     setGameState((prev) => ({
       ...prev,
       gameStarted: false,
@@ -142,7 +110,6 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   function handleRematchState({ status, message }: RematchStatusEventData) {
-    console.log("[handleRematchState] status:", status, "message:", message);
     setGameState((prev) => ({
       ...prev,
       rematchStatus: status,

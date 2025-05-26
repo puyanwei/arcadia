@@ -64,35 +64,20 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         });
 
         socketRef.current.on("connect", () => {
-          if (socketRef.current) {
-            console.log(
-              "[Socket] Connected with id:",
-              socketRef.current.id,
-              "clientId:",
-              getClientId(),
-              "to",
-              url
-            );
-          }
           setIsConnected(true);
           setConnectionError(null);
         });
 
-        socketRef.current.on("disconnect", () => {
-          console.log("[Socket] Disconnected");
-          setIsConnected(false);
-        });
+        socketRef.current.on("disconnect", () => setIsConnected(false));
 
-        socketRef.current.on("connect_error", (error) => {
-          console.error("[Socket] Connection error:", error);
-          setConnectionError(error.message);
-        });
+        socketRef.current.on("connect_error", (error) =>
+          setConnectionError(error.message)
+        );
       }
     });
 
     return () => {
       if (socketRef.current) {
-        console.log("[Socket] Cleaning up socket connection");
         socketRef.current.disconnect();
         socketRef.current = null;
         connectionAttemptRef.current = false;
@@ -104,7 +89,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     event: K,
     handler: GameRoomEventHandlerMap[K]
   ) {
-    console.log("[Socket] Registering handler for event:", event);
     socketRef.current?.on(event as string, handler as (...args: any[]) => void);
   }
 
@@ -112,7 +96,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     event: K,
     handler: GameRoomEventHandlerMap[K]
   ) {
-    console.log("[Socket] Removing handler for event:", event);
     socketRef.current?.off(
       event as string,
       handler as (...args: any[]) => void

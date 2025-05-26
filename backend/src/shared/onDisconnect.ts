@@ -2,7 +2,6 @@ import { getPlayerRoom } from "./onJoinRoom";
 import { SocketHandlerParams } from "./types";
 
 export function onDisconnect({ socket, io, gameStates }: SocketHandlerParams) {
-    console.log("User disconnected:", socket.id);
     for (const [gameType, gameRooms] of Object.entries(gameStates)) {
       const room = getPlayerRoom(gameRooms, socket.id);
       if (!room) continue;

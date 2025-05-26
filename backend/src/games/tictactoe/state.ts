@@ -33,9 +33,10 @@ function shuffleNumbers(): ["player1", "player2"] | ["player2", "player1"] {
 }
 
 export function assignPlayerNumber(gameRooms: GameRooms, room: GameRoom, playerId: string): PlayerNumber {
-  const firstPlayerNumber = gameRooms.playerNumbers[room.players[0]];
-  const number = firstPlayerNumber === 'player1' ? 'player2' : 'player1';
-  gameRooms.playerNumbers[playerId] = number;
-  return number;
+  const [firstPlayerNumber, secondPlayerNumber] = shuffleNumbers();
+  gameRooms.playerNumbers[room.players[0]] = firstPlayerNumber;
+  gameRooms.playerNumbers[room.players[1]] = secondPlayerNumber;
+  gameRooms.playerNumbers[playerId] = firstPlayerNumber === 'player1' ? 'player2' : 'player1';
+  return gameRooms.playerNumbers[playerId];
 }
 

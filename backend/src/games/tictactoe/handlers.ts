@@ -83,7 +83,6 @@ export function handleRematch(
     const shouldSwapFirst = Math.random() < 0.5;
     
     io.to(roomId).emit("updateBoard", Array(9).fill(null));
-    console.log(`[handleRematch] Emitting gameStart to room: ${roomId}, shouldSwapFirst:`, shouldSwapFirst);
     io.to(roomId).emit("gameStart", shouldSwapFirst);
     
     return { newGameRooms };
@@ -110,8 +109,6 @@ export async function emitGameState(io: Server, gameRooms: GameRooms, roomId: st
     io.to(roomId).emit("playerJoined", room.players.length);
     if (room.players.length === 2) {
       const sockets = await io.in(roomId).allSockets();
-      console.log(`[emitGameState] Sockets in room ${roomId}:`, Array.from(sockets));
-      console.log(`[emitGameState] Emitting gameStart to room: ${roomId}`);
       io.to(roomId).emit("gameStart", true);
     }
   }
