@@ -1,4 +1,5 @@
 import { GameRoomState, RematchStatus } from '@/hooks/useGameRoom';
+import { Prettify } from '@/types/game';
 
 export type PlayerNumber = 'player1' | 'player2';
 
@@ -26,6 +27,6 @@ export type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & {
   connectionError: string | null;
   roomId: string;
 };
-
-export type GameEndEventData = { winner: string; message: string }; 
+export type GameEndStatus = Prettify<'draw' | PlayerNumber>;
+export type GameEndEventData = { gameResult: GameEndStatus; message: string }; 
 export type RematchStatusEventData = { status: RematchStatus; message: string };

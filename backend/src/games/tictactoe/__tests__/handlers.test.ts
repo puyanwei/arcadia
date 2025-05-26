@@ -70,7 +70,7 @@ describe('handleMove', () => {
     move.board[8] = 'player2';
     handleMove({ gameRooms, roomId: 'room1', playerNumber: 'player1', move, socket: mockSocket as Socket, io: mockIo as Server });
     expect(mockIo.to).toHaveBeenCalledWith('room1');
-    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { winner: 'draw', message: 'Game ended in a draw!' });
+    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { gameResult: 'draw', message: 'Game ended in a draw!' });
   });
 
   it('should emit gameEnd event with winner if the game is won', () => {
@@ -80,8 +80,8 @@ describe('handleMove', () => {
     move.board[2] = 'player1';
     handleMove({ gameRooms, roomId: 'room1', playerNumber: 'player1', move, socket: mockSocket as Socket, io: mockIo as Server });
     expect(mockIo.to).toHaveBeenCalledWith('player1');
-    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { winner: 'player1', message: 'You won!' });
+    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { gameResult: 'player1', message: 'You won!' });
     expect(mockIo.to).toHaveBeenCalledWith('player2');
-    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { winner: 'player1', message: 'You lost!' });
+    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { gameResult: 'player1', message: 'You lost!' });
   });
 }); 

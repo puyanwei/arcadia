@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSocket } from './useSocket';
+import { Prettify } from '@/types/game';
 
 export type RematchStatus = 'pending' | 'accepted' | 'rejected' | null;
 export type PlayerNumber = 'player1' | 'player2';
@@ -29,13 +30,12 @@ export type GameRoomEventHandlerMap = {
   rematchState: RematchStateEventHandler;
   gameStart: GameStartEventHandler;
   updateBoard: (newBoard: any) => void;
-  gameEnd: (data: { winner: string; message: string }) => void;
+  gameEnd: (data: { gameResult: 'draw' | PlayerNumber; message: string }) => void;
   playerNumber: PlayerNumberEventHandler;
 };
 
 // Event name union
-export type GameRoomEventName = keyof GameRoomEventHandlerMap;
-
+export type GameRoomEventName = Prettify<keyof GameRoomEventHandlerMap>
 // Type safe way of making sure GameRoomEventHandlerMap keys match with the values
 type GameRoomEventHandlerTuple = {
   [K in GameRoomEventName]: [K, GameRoomEventHandlerMap[K]]

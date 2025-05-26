@@ -99,12 +99,13 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     }));
   }
 
-  function handleGameEnd({ winner, message }: GameEndEventData) {
+  function handleGameEnd({ gameResult, message }: GameEndEventData) {
+    console.log("handleGameEnd received:", { gameResult, message });
     setGameState((prev) => ({
       ...prev,
       gameStarted: false,
       gameFinished: true,
-      gameStatus: message,
+      gameStatus: gameResult === "draw" ? "It's a tie!" : message,
       isMyTurn: false,
     }));
   }

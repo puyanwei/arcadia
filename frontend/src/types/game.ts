@@ -1,3 +1,7 @@
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
 export type PlayerNumber = 'player1' | 'player2' | null;
 export type Cell = (string | null)
 export type Board = Cell[]

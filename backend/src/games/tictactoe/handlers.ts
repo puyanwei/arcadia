@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { assignPlayerNumber, checkWinner } from './state';
+import { checkEndOfGame } from './state';
 import { Board, RematchState, PlayerNumber, GameRooms } from '../../shared/types';
 
 type HandleMoveParams = {
@@ -27,21 +27,25 @@ export function handleMove({ gameRooms, roomId, move, socket, io }: HandleMovePa
   room.board = move.board;
   socket.to(roomId).emit("updateBoard", move.board);
   
-  const result = checkWinner(move.board);
+  console.log('[handleMove] Checking end of game for board:', move.board);
+  const result = checkEndOfGame(move.board);
   if (!result) return { newGameRooms: gameRooms };
 
   if (result === 'draw') {
+    console.log('[gameEnd emit] gameResult: draw, message: Game ended in a draw!');
     io.to(roomId).emit("gameEnd", { 
-      winner: 'draw', 
+      gameResult: 'draw', 
       message: 'Game ended in a draw!'
     });
   } else {
     room.players.forEach(playerId => {
       const playerNumber = gameRooms.playerNumbers[playerId];
       const isWinner = playerNumber === result;
+      const msg = isWinner ? "You won!" : "You lost!";
+      console.log(`[gameEnd emit] gameResult: ${result}, message: ${msg} (to playerId: ${playerId})`);
       io.to(playerId).emit("gameEnd", {
-        winner: result,
-        message: isWinner ? "You won!" : "You lost!"
+        gameResult: result,
+        message: msg
       });
     });
   }
