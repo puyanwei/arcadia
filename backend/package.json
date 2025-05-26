@@ -1,13 +1,12 @@
 {
   "name": "arcadia-backend",
   "version": "1.0.0",
+  "description": "Backend server for Arcadia",
   "main": "dist/server.js",
-  "engines": {
-    "node": "18.x"
-  },
   "scripts": {
     "test": "vitest --reporter=verbose",
     "start": "node dist/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "postinstall": "npm run build",
     "type-check": "tsc --noEmit"
@@ -15,7 +14,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -28,6 +26,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.10",
     "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
     "vitest": "^3.1.4"
   }
 }

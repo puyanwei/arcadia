@@ -32,36 +32,71 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const connectionAttemptRef = useRef<boolean>(false);
 
   useEffect(() => {
+    if (connectionAttemptRef.current) return;
+    connectionAttemptRef.current = true;
+
+    // Get or create a client ID that persists across tabs
+    const getClientId = () => {
+      const storedId = localStorage.getItem("arcadia_client_id");
+      if (storedId) return storedId;
+
+      const newId = `client_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem("arcadia_client_id", newId);
+      return newId;
+    };
+
     // Dynamically import socket.io-client only on the client
-    let socket: Socket | null = null;
     import("socket.io-client").then(({ io }) => {
       const url = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
-      socket = io(url);
-      socketRef.current = socket;
 
-      socket.on("connect", () => {
-        if (socket) {
-          console.log("[Socket] Connected with id:", socket.id, "to", url);
-        }
-        setIsConnected(true);
-        setConnectionError(null);
-      });
+      // Only create a new socket if one doesn't exist
+      if (!socketRef.current) {
+        socketRef.current = io(url, {
+          reconnectionAttempts: 3,
+          reconnectionDelay: 1000,
+          timeout: 5000,
+          auth: {
+            clientId: getClientId(),
+          },
+        });
 
-      socket.on("disconnect", () => {
-        console.log("[Socket] Disconnected");
-        setIsConnected(false);
-      });
+        socketRef.current.on("connect", () => {
+          if (socketRef.current) {
+            console.log(
+              "[Socket] Connected with id:",
+              socketRef.current.id,
+              "clientId:",
+              getClientId(),
+              "to",
+              url
+            );
+          }
+          setIsConnected(true);
+          setConnectionError(null);
+        });
 
-      socket.on("connect_error", (error) => {
-        console.error("[Socket] Connection error:", error);
-        setConnectionError(error.message);
-      });
+        socketRef.current.on("disconnect", () => {
+          console.log("[Socket] Disconnected");
+          setIsConnected(false);
+        });
+
+        socketRef.current.on("connect_error", (error) => {
+          console.error("[Socket] Connection error:", error);
+          setConnectionError(error.message);
+        });
+      }
     });
 
     return () => {
-      socket?.disconnect();
+      if (socketRef.current) {
+        console.log("[Socket] Cleaning up socket connection");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        connectionAttemptRef.current = false;
+      }
     };
   }, []);
 
