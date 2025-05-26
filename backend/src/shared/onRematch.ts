@@ -12,22 +12,23 @@ export function onRematch({ data, socket, io, gameStates }: SocketHandlerParams)
     const room = gameRooms.rooms[roomId];
     if (!room) return;
   
+    const clientId = socket.handshake.auth && socket.handshake.auth.clientId ? socket.handshake.auth.clientId : socket.id;
     const currentRematchState = room.rematchState;
     if (!currentRematchState) {
       const newRematchState: RematchState = {
         requested: true,
-        requestedBy: socket.id,
+        requestedBy: clientId,
         status: "pending"
       };
       
-      socket.emit("rematchState", { status: "pending", message: "Waiting for opponent to accept...", requestedBy: socket.id });
-      socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!", requestedBy: socket.id });
+      socket.emit("rematchState", { status: "pending", message: "Waiting for opponent to accept...", requestedBy: clientId });
+      socket.to(roomId).emit("rematchState", { status: "pending", message: "Opponent wants a rematch!", requestedBy: clientId });
       
       room.rematchState = newRematchState;
       return;
     }
   
-    if (currentRematchState.requestedBy !== socket.id) {
+    if (currentRematchState.requestedBy !== clientId) {
       room.board = Array(9).fill(null);
       const shouldSwapFirst = Math.random() < 0.5;
       

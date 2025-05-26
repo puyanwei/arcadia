@@ -2,11 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { onRematch } from '../onRematch';
 import { RematchState } from '../types';
 
-const mockSocket = () => {
+const mockSocket = (clientId = 'player1') => {
   const socket: any = {
-    id: 'player1',
+    id: clientId,
     emit: vi.fn(),
     to: vi.fn().mockReturnThis(),
+    handshake: { auth: { clientId } },
   };
   return socket;
 };
@@ -25,7 +26,7 @@ describe('onRematch', () => {
   let gameStates: any;
 
   beforeEach(() => {
-    socket = mockSocket();
+    socket = mockSocket('player1');
     io = mockIo();
     gameStates = {
       tictactoe: {
@@ -57,7 +58,7 @@ describe('onRematch', () => {
     // First player requests rematch
     onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', playerNumber: 'player1' }, socket, io, gameStates });
     // Second player accepts
-    const socket2 = { ...mockSocket(), id: 'player2', emit: vi.fn(), to: vi.fn().mockReturnThis() };
+    const socket2 = mockSocket('player2');
     onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', playerNumber: 'player2' }, socket: socket2, io, gameStates });
     const room = gameStates.tictactoe.rooms['room1'];
     expect(room.board).toEqual(Array(9).fill(null));
@@ -76,7 +77,7 @@ describe('onRematch', () => {
     // First player requests rematch
     onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', playerNumber: 'player1' }, socket, io, gameStates });
     // Simulate rejection by the second player
-    const socket2 = { ...mockSocket(), id: 'player2', emit: vi.fn(), to: vi.fn().mockReturnThis() };
+    const socket2 = mockSocket('player2');
     // Manually set up a rejection scenario
     const room = gameStates.tictactoe.rooms['room1'];
     room.rematchState = { requested: true, requestedBy: 'player1', status: 'pending' };
