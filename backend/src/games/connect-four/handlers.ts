@@ -34,9 +34,7 @@ export function handleMakeMoveCF({
   const room = gameRooms.rooms[roomId];
   if (!room) throw new Error('Room not found');
 
-  const clientId = Object.keys(clientSocketMap).find(
-    (socketId) => clientSocketMap[socketId] === socket.id
-  );
+  const clientId = clientSocketMap[socket.id];
   if (!clientId) {
     throw new Error("Client not found for socket");
   }

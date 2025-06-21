@@ -1,5 +1,4 @@
 import { SocketHandlerParams } from "./types";
-import { getPlayerRoom } from "./onJoinRoom";
 
 export function onDisconnect({ socket, gameStates, clientSocketMap, io }: SocketHandlerParams) {
     const clientId = clientSocketMap[socket.id];
@@ -8,8 +7,8 @@ export function onDisconnect({ socket, gameStates, clientSocketMap, io }: Socket
     console.log(`[onDisconnect] Client ${clientId} (${socket.id}) disconnected.`);
 
     // Find which room the player was in
-    let playerRoom = null;
-    let gameType = null;
+    let playerRoom: any = null;
+    let gameType: any = null;
 
     for (const type in gameStates) {
         const game = gameStates[type as keyof typeof gameStates];
@@ -25,7 +24,7 @@ export function onDisconnect({ socket, gameStates, clientSocketMap, io }: Socket
     
     if (playerRoom && gameType) {
         // Remove player from the room
-        playerRoom.players = playerRoom.players.filter(id => id !== clientId);
+        playerRoom.players = playerRoom.players.filter((id: string) => id !== clientId);
         io.to(playerRoom.id).emit('playerLeft', clientId);
 
         console.log(`[onDisconnect] Removed ${clientId} from room ${playerRoom.id}. Players remaining: ${playerRoom.players.length}`);

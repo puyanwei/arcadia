@@ -1,9 +1,10 @@
 import { GameRooms, GameRoom, PlayerNumber, ConnectFourCell, ConnectFourBoard } from '../../shared/types';
 
-export function createInitialStateCF(): GameRooms {
+export function createInitialState(): GameRooms {
   return {
     rooms: {},
-    playerNumbers: {}
+    playerNumbers: {},
+    playerStatuses: {},
   };
 }
 

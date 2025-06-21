@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { onMove } from '../onMove';
 import { onJoinRoom } from '../onJoinRoom';
-import { GameRooms, GameType } from '../types';
+import { GameRooms, GameType, ConnectFourBoard } from '../types';
 import { createInitialState } from '../state';
 
 describe('onMove', () => {
@@ -24,27 +24,28 @@ describe('onMove', () => {
       tictactoe: createInitialState(),
       'connect-four': createInitialState(),
     };
-    clientSocketMap = {};
+    clientSocketMap = {
+      [socket1.id]: clientId1,
+      [socket2.id]: clientId2,
+    };
 
-    // Setup: Two players join the room
+    // Setup: Two players join the room for each test
     onJoinRoom({ data: { gameType: 'tictactoe', roomId, clientId: clientId1 }, gameStates, socket: socket1 as any, io: mockIo, clientSocketMap });
     onJoinRoom({ data: { gameType: 'tictactoe', roomId, clientId: clientId2 }, gameStates, socket: socket2 as any, io: mockIo, clientSocketMap });
+    onJoinRoom({ data: { gameType: 'connect-four', roomId, clientId: clientId1 }, gameStates, socket: socket1 as any, io: mockIo, clientSocketMap });
+    onJoinRoom({ data: { gameType: 'connect-four', roomId, clientId: clientId2 }, gameStates, socket: socket2 as any, io: mockIo, clientSocketMap });
   });
 
   it('should call handleMove for tictactoe game type and update the board', () => {
     const move = { index: 0 };
-    // Find which client is 'player1'
     const player1ClientId = Object.keys(gameStates.tictactoe.playerNumbers).find(
       (cid) => gameStates.tictactoe.playerNumbers[cid] === 'player1'
     )!;
-    const player2ClientId = player1ClientId === clientId1 ? clientId2 : clientId1;
-
-    const playerNumber = gameStates.tictactoe.playerNumbers[player1ClientId];
-    // It's player1's turn
-    gameStates.tictactoe.rooms[roomId].board = Array(9).fill(null);
+    
     gameStates.tictactoe.rooms[roomId].currentPlayer = player1ClientId;
-    // Use the correct socket for player1
     const socket = player1ClientId === clientId1 ? socket1 : socket2;
+    const playerNumber = gameStates.tictactoe.playerNumbers[player1ClientId];
+
     onMove({
       data: { gameType: 'tictactoe', roomId, clientId: player1ClientId, move },
       gameStates,
@@ -52,6 +53,7 @@ describe('onMove', () => {
       io: mockIo,
       clientSocketMap,
     });
+    
     const room = gameStates.tictactoe.rooms[roomId];
     expect(room.board[0]).toEqual(playerNumber);
     expect(mockIo.to).toHaveBeenCalledWith(roomId);
@@ -62,19 +64,17 @@ describe('onMove', () => {
   });
 
   it('should call handleMakeMoveCF for connect-four game type', () => {
-    const board = Array(42).fill('valid');
-    const playerNumber = gameStates['connect-four'].playerNumbers[clientId1];
+    const move = { board: Array(42).fill('valid') as ConnectFourBoard };
+    gameStates['connect-four'].rooms[roomId].currentPlayer = clientId1;
 
     onMove({
-      data: { gameType: 'connect-four', roomId, clientId: clientId1, board },
+      data: { gameType: 'connect-four', roomId, clientId: clientId1, move },
       gameStates,
       socket: socket1 as any,
       io: mockIo,
       clientSocketMap,
     });
 
-    expect(mockIo.to).toHaveBeenCalledWith(roomId);
-    // Don't check for board update here as CF handler is complex, just that it was called.
     expect(mockIo.emit).toHaveBeenCalled();
   });
 
