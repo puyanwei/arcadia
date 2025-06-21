@@ -24,7 +24,7 @@ export function TicTacToe() {
 
   const playerId =
     typeof window !== "undefined"
-      ? localStorage.getItem("arcadia_client_id")
+      ? sessionStorage.getItem("arcadia_client_id")
       : undefined;
 
   const handleMove = (index: number) => {
@@ -45,7 +45,17 @@ export function TicTacToe() {
   const gameIsInProgress = gameStarted && !gameFinished;
   const gameHasFinished = gameFinished;
 
-  console.log({ playerId, requestedBy, rematchStatus });
+  console.log("TicTacToe component render:", {
+    playerId,
+    requestedBy,
+    rematchStatus,
+    gameStarted,
+    gameFinished,
+    gameHasNotStarted,
+    gameIsInProgress,
+    gameHasFinished,
+    gameStatus,
+  });
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -110,13 +120,15 @@ export function TicTacToe() {
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={handleRematch}
-            disabled={rematchStatus === "pending" && playerId === requestedBy}
+            disabled={rematchStatus === "waiting"}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
           >
-            {rematchStatus === "pending"
-              ? playerId === requestedBy
-                ? "Waiting for opponent..."
-                : "Accept Rematch"
+            {rematchStatus === "waiting"
+              ? "Waiting for opponent..."
+              : rematchStatus === "pending"
+              ? "Accept Rematch"
+              : rematchStatus === "accepted"
+              ? "Game starting..."
               : "Play Again"}
           </button>
         </div>

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSocket } from './useSocket';
 import { Prettify } from '@/types/game';
 
-export type RematchStatus = 'pending' | 'accepted' | 'rejected' | null;
+export type RematchStatus = 'waiting' | 'pending' | 'accepted' | 'rejected' | null;
 export type PlayerNumber = 'player1' | 'player2';
 
 export type GameRoomState = {

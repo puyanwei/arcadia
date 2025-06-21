@@ -42,12 +42,50 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }, [on, off]);
 
   function handleUpdateBoard(newBoard: Board) {
+    console.log("TicTacToe handleUpdateBoard called:", {
+      newBoard,
+      isFreshBoard: newBoard.every((cell) => cell === null),
+    });
+
     setGameState((prev) => {
+      console.log("TicTacToe handleUpdateBoard - current state:", {
+        gameFinished: prev.gameFinished,
+        gameStarted: prev.gameStarted,
+        playerNumber: prev.playerNumber,
+      });
+
       if (!prev.playerNumber) return { ...prev, board: newBoard };
+
+      // If the board is completely reset (all cells are null), this is likely a rematch
+      const isFreshBoard = newBoard.every((cell) => cell === null);
+
+      if (prev.gameFinished && isFreshBoard) {
+        // This is a rematch - reset the game state
+        console.log(
+          "TicTacToe handleUpdateBoard - rematch detected, resetting game state"
+        );
+        return {
+          ...prev,
+          board: newBoard,
+          gameStarted: true,
+          gameFinished: false,
+          isMyTurn: prev.playerNumber === "player1",
+          gameStatus:
+            prev.playerNumber === "player1" ? "Your turn!" : "Opponent's turn!",
+        };
+      }
+
       const xCount = newBoard.filter((cell) => cell === "player1").length;
       const oCount = newBoard.filter((cell) => cell === "player2").length;
       const myTurn =
         prev.playerNumber === "player1" ? xCount === oCount : xCount > oCount;
+
+      console.log("TicTacToe handleUpdateBoard - normal board update:", {
+        myTurn,
+        xCount,
+        oCount,
+      });
+
       return {
         ...prev,
         board: newBoard,
@@ -73,14 +111,31 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   function handleGameStart() {
+    console.log("TicTacToe handleGameStart called");
     setGameState((prev) => {
+      console.log("TicTacToe handleGameStart - current state:", {
+        gameFinished: prev.gameFinished,
+        gameStarted: prev.gameStarted,
+        playerNumber: prev.playerNumber,
+      });
+
       if (!prev.playerNumber) {
+        console.log(
+          "TicTacToe handleGameStart - no player number, setting gameStarted"
+        );
         return { ...prev, gameStarted: true, gameFinished: false };
       }
       const xCount = prev.board.filter((cell) => cell === "player1").length;
       const oCount = prev.board.filter((cell) => cell === "player2").length;
       const myTurn =
         prev.playerNumber === "player1" ? xCount === oCount : xCount > oCount;
+
+      console.log("TicTacToe handleGameStart - resetting game state:", {
+        myTurn,
+        xCount,
+        oCount,
+      });
+
       return {
         ...prev,
         gameStarted: true,
@@ -111,11 +166,35 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   function handleRematchState({ status, message }: RematchStatusEventData) {
-    setGameState((prev) => ({
-      ...prev,
-      rematchStatus: status,
-      gameStatus: message,
-    }));
+    console.log("TicTacToe handleRematchState called:", { status, message });
+    setGameState((prev) => {
+      console.log("TicTacToe current state before rematch:", {
+        gameFinished: prev.gameFinished,
+        gameStarted: prev.gameStarted,
+        rematchStatus: prev.rematchStatus,
+        playerNumber: prev.playerNumber,
+      });
+
+      if (status === "accepted") {
+        // When rematch is accepted, reset the game state
+        console.log("TicTacToe rematch accepted - resetting game state");
+        return {
+          ...prev,
+          rematchStatus: status,
+          gameStatus: message,
+          gameFinished: false,
+          gameStarted: true,
+          isMyTurn: prev.playerNumber === "player1",
+        };
+      }
+
+      console.log("TicTacToe rematch state updated:", { status, message });
+      return {
+        ...prev,
+        rematchStatus: status,
+        gameStatus: message,
+      };
+    });
   }
 
   function makeMove(index: number, roomId: string) {

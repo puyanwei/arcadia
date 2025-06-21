@@ -19,4 +19,4 @@ export type GameActions = {
   rematch: (roomId: string) => void;
 };
 
-export type RematchStatus = "pending" | "accepted" | "rejected" | null; 
+export type RematchStatus = "waiting" | "pending" | "accepted" | "rejected" | null; 

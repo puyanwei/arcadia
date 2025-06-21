@@ -38,14 +38,15 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     if (connectionAttemptRef.current) return;
     connectionAttemptRef.current = true;
 
-    // Get or create a client ID that persists across tabs
+    // Get or create a client ID that persists for the session
     const getClientId = () => {
-      const storedId = localStorage.getItem("arcadia_client_id");
-      if (storedId) return storedId;
-
-      const newId = `client_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem("arcadia_client_id", newId);
-      return newId;
+      let clientId = sessionStorage.getItem("arcadia_client_id");
+      if (!clientId) {
+        // A simple unique ID generator for the session
+        clientId = `client_${Math.random().toString(36).substr(2, 9)}`;
+        sessionStorage.setItem("arcadia_client_id", clientId);
+      }
+      return clientId;
     };
 
     // Dynamically import socket.io-client only on the client
@@ -59,7 +60,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
           reconnectionDelay: 1000,
           timeout: 5000,
           auth: {
-            clientId: getClientId(),
+            clientId: getClientId(), // Use the session-specific clientId
           },
         });
 

@@ -122,10 +122,12 @@ export function ConnectFour() {
           onClick={handlePlayAgain}
           className="mt-4 p-2 bg-green-600 hover:bg-green-700 text-white rounded w-64"
         >
-          {rematchStatus === "pending"
+          {rematchStatus === "waiting"
+            ? "Waiting for opponent..."
+            : rematchStatus === "pending"
             ? "Accept Rematch"
             : rematchStatus === "accepted"
-            ? "Waiting for opponent..."
+            ? "Game starting..."
             : "Rematch"}
         </button>
       )}

@@ -119,12 +119,31 @@ export function useConnectFour(): UseConnectFourReturnType {
     const handleUpdateBoard = (newBoard: ConnectFourCell[]) => {
       const cellStates = computeCellStates(newBoard);
       setGameState((prev) => {
+        // If the board is completely reset (all cells are 'valid'), this is likely a rematch
+        const isFreshBoard = newBoard.every((cell) => cell === "valid");
+
+        if (prev.gameFinished && isFreshBoard) {
+          // This is a rematch - reset the game state
+          return {
+            ...prev,
+            board: cellStates,
+            gameStarted: true,
+            gameFinished: false,
+            isMyTurn: prev.playerNumber === "player1",
+            gameStatus:
+              prev.playerNumber === "player1"
+                ? "Your turn!"
+                : "Waiting for opponent's move...",
+          };
+        }
+
         if (prev.gameFinished) {
           return {
             ...prev,
             board: cellStates,
           };
         }
+
         return {
           ...prev,
           board: cellStates,
@@ -162,14 +181,53 @@ export function useConnectFour(): UseConnectFourReturnType {
       }));
     }
 
+    function handleGameStart() {
+      setGameState((prev) => ({
+        ...prev,
+        gameStarted: true,
+        gameFinished: false,
+        isMyTurn: prev.playerNumber === "player1",
+        gameStatus:
+          prev.playerNumber === "player1"
+            ? "Your turn!"
+            : "Waiting for opponent's move...",
+      }));
+    }
+
+    function handleRematchState({
+      status,
+      message,
+    }: {
+      status: string | null;
+      message: string;
+    }) {
+      if (status === "accepted") {
+        // When rematch is accepted, reset the game state
+        setGameState((prev) => ({
+          ...prev,
+          gameStarted: true,
+          gameFinished: false,
+          isMyTurn: prev.playerNumber === "player1",
+          gameStatus:
+            prev.playerNumber === "player1"
+              ? "Your turn!"
+              : "Waiting for opponent's move...",
+        }));
+      }
+    }
+
     on("updateBoard", handleUpdateBoard);
     on("playerNumber", handlePlayerNumber);
     on("gameEnd", handleGameEnd);
+    on("gameStart", handleGameStart);
+    on("rematchState", handleRematchState);
 
     return () => {
       off("updateBoard", handleUpdateBoard);
       off("playerNumber", handlePlayerNumber);
       off("gameEnd", handleGameEnd);
+      off("gameStart", handleGameStart);
+      off("rematchState", handleRematchState);
     };
   }, [on, off]);
 
