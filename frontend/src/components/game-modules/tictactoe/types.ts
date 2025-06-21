@@ -1,8 +1,14 @@
-import { Prettify, RematchStatus } from '@/types/game';
+import { RematchStatus } from '@/types/game';
 import { GameState as GlobalGameState, PlayerNumber } from "@/types/game";
-import { PlayerStatus as GlobalPlayerStatus } from "@/types/game";
 
 export type Board = (PlayerNumber | null)[];
+
+export type GameFlowStatus =
+  | "waiting"
+  | "playing"
+  | "gameOver"
+  | "rematchPending"
+  | "rematchWaiting";
 
 export type GameState = Omit<
   GlobalGameState,
@@ -32,7 +38,7 @@ export type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & {
 };
 
 export type StatusUpdateData = {
-  status: GlobalPlayerStatus;
+  status: GameFlowStatus;
   gameResult?: "draw" | string;
   message?: string;
 };

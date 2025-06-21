@@ -8,7 +8,6 @@ export function TicTacToe() {
     board,
     isMyTurn,
     gameStatus,
-    playerStatus,
     makeMove,
     joinRoom,
     rematch,
@@ -44,16 +43,13 @@ export function TicTacToe() {
         <h2 className="text-2xl font-bold mb-2 text-white">Tic Tac Toe</h2>
         <p
           className={`text-lg font-semibold ${
-            playerStatus === "rematchPending" ||
-            playerStatus === "rematchWaiting"
+            gameStatus.includes("rematch") ||
+            gameStatus.includes("Waiting for opponent")
               ? "text-yellow-400"
               : "text-gray-200"
           }`}
         >
           {gameStatus}
-        </p>
-        <p className="text-sm text-gray-400 mt-1">
-          Status: {playerStatus || "null"}
         </p>
       </div>
 
@@ -77,7 +73,7 @@ export function TicTacToe() {
         </div>
       )}
 
-      {playerStatus === "waiting" && (
+      {gameStatus === "Waiting for opponent..." && (
         <div className="flex flex-col items-center justify-center p-8 text-white bg-gray-800 rounded-lg shadow-xl">
           <p className="text-lg">
             Room ID: <span className="font-bold text-yellow-400">{roomId}</span>
@@ -86,7 +82,7 @@ export function TicTacToe() {
         </div>
       )}
 
-      {playerStatus === "playing" && (
+      {gameStatus.includes("turn") && (
         <div className="flex flex-col items-center gap-4">
           {playerNumber && (
             <p className="text-gray-200">
@@ -103,9 +99,7 @@ export function TicTacToe() {
               <button
                 key={index}
                 onClick={() => handleMove(index)}
-                disabled={
-                  playerStatus !== "playing" || !isMyTurn || cell !== null
-                }
+                disabled={!isMyTurn || cell !== null}
                 className={`w-20 h-20 text-4xl font-bold border-2 rounded-lg
                 ${cell === "player1" ? "text-blue-600" : "text-red-600"}
                 ${
@@ -120,39 +114,21 @@ export function TicTacToe() {
         </div>
       )}
 
-      {(playerStatus === "gameOver" ||
-        playerStatus === "rematchPending" ||
-        playerStatus === "rematchWaiting") && (
+      {(gameStatus.includes("won") ||
+        gameStatus.includes("lost") ||
+        gameStatus.includes("draw") ||
+        gameStatus.includes("rematch")) && (
         <div className="flex flex-col items-center gap-4">
           <div className="text-center">
             <p className="text-xl text-white mb-4 font-semibold">
-              {playerStatus === "gameOver" && gameStatus}
-              {playerStatus === "rematchPending" &&
-                "🎮 Opponent wants a rematch!"}
-              {playerStatus === "rematchWaiting" &&
-                "⏳ Waiting for opponent to accept..."}
+              {gameStatus}
             </p>
-            {playerStatus === "rematchPending" && (
-              <p className="text-gray-300 text-sm mb-4">
-                Click the button below to accept the rematch
-              </p>
-            )}
-            {playerStatus === "rematchWaiting" && (
-              <p className="text-gray-300 text-sm mb-4">
-                Your opponent will see a rematch request
-              </p>
-            )}
           </div>
           <button
             onClick={handleRematch}
-            disabled={playerStatus === "rematchWaiting"}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-lg font-semibold"
           >
-            {playerStatus === "rematchWaiting"
-              ? "Waiting for opponent..."
-              : playerStatus === "rematchPending"
-              ? "Accept Rematch"
-              : "Play Again"}
+            Play Again
           </button>
         </div>
       )}

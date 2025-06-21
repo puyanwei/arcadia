@@ -70,18 +70,19 @@ export function handleMove({
     gameRooms.playerStatuses[playerId] = 'gameOver';
   });
 
-  let winnerId: string | 'draw' | null = null;
+  let gameResult: string | 'draw' | null = null;
   if (result === 'draw') {
-    winnerId = 'draw';
+    gameResult = 'draw';
   } else if (result) {
     // Find the clientId of the winner
-    winnerId =
+    gameResult =
       Object.keys(gameRooms.playerNumbers).find(
         id => gameRooms.playerNumbers[id] === result
       ) || null;
   }
 
-  io.to(roomId).emit('statusUpdate', { status: 'gameOver', gameResult: winnerId });
+  console.log('Game Over. Result:', gameResult);
+  io.to(roomId).emit('statusUpdate', { status: 'gameOver', gameResult });
 
   return { newGameRooms: gameRooms };
 }
