@@ -41,21 +41,6 @@ describe('onRematch', () => {
         playerNumbers: { client1: 'player1', client2: 'player2' },
         playerStatuses: { client1: 'gameOver', client2: 'gameOver' },
       },
-      'connect-four': {
-        ...baseInitialState,
-        rooms: {
-          room1: {
-            id: 'room1',
-            players: ['client1', 'client2'],
-            board: Array(42).fill(null),
-            currentPlayer: 'client1',
-            firstPlayer: 'client1',
-            rematchState: undefined,
-          },
-        },
-        playerNumbers: { client1: 'player1', client2: 'player2' },
-        playerStatuses: { client1: 'gameOver', client2: 'gameOver' },
-      },
     };
     clientSocketMap = { 'socket1': 'client1', 'socket2': 'client2' };
   });

@@ -12,11 +12,5 @@ type Game = {
             description: 'Classic two-player game of X\'s and O\'s',
             path: '/games/tictactoe'
         },
-        {
-            id: 'connect-four',
-            name: 'Connect Four',
-            description: 'Classic two-player game of Connect Four (Pending)',
-            path: '/games/connect-four'
-        }
   ] as const;
   

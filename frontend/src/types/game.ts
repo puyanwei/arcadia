@@ -33,7 +33,7 @@ export type GameActions = {
   rematch: (roomId: string) => void;
 };
 
-export type GameType = "tictactoe" | "connect-four";
+export type GameType = "tictactoe";
 
 export type Grid = {
   columns: number;

@@ -1,6 +1,5 @@
 import { SocketHandlerParams } from './types';
 import { handleMove } from '../games/tictactoe/handlers';
-import { handleMakeMoveCF } from '../games/connect-four/handlers';
 
 export function onMove({ data, gameStates, socket, io, clientSocketMap }: SocketHandlerParams) {
   if (!data?.roomId || !data.clientId || !data.move) return;
@@ -19,9 +18,5 @@ export function onMove({ data, gameStates, socket, io, clientSocketMap }: Socket
 
   if (gameType === 'tictactoe') {
     return handleMove(params);
-  }
-
-  if (gameType === 'connect-four') {
-    return handleMakeMoveCF(params);
   }
 }

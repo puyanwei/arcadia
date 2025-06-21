@@ -21,7 +21,6 @@ describe('onJoinRoom', () => {
     }
     gameStates = {
       tictactoe: createInitialState(),
-      'connect-four': createInitialState(),
     }
     clientSocketMap = {}
   })

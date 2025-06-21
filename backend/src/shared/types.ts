@@ -5,7 +5,7 @@ export type Prettify<T> = {
 } & {};
 
 export type PlayerNumber = "player1" | "player2";
-export type GameType = "tictactoe" | "connect-four";
+export type GameType = "tictactoe";
 
 export type Board = (PlayerNumber | null)[];
 
@@ -61,10 +61,6 @@ export type HandleMoveParams<T> = {
   io: Server;
   clientSocketMap: Record<string, string>;
 };
-
-// Connect Four
-export type ConnectFourCell = Prettify<PlayerNumber | 'invalid' | 'valid'>
-export type ConnectFourBoard = ('player1' | 'player2' | 'valid' | 'invalid')[];
 
 // Tic Tac Toe
 export type TicTacToeCell = Prettify<PlayerNumber | 'invalid' | 'valid'>

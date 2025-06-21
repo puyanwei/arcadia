@@ -22,7 +22,6 @@ describe('onDisconnect', () => {
     };
     gameStates = {
       tictactoe: createInitialState(),
-      'connect-four': createInitialState(),
     };
     clientSocketMap = {};
   });

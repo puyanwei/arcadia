@@ -15,7 +15,6 @@ dotenv.config();
 
 const gameStates: Record<GameType, GameRooms> = {
   'tictactoe': createInitialState(),
-  'connect-four': createInitialState()
 };
 
 const clientSocketMap: Record<string, string> = {};
@@ -61,7 +60,6 @@ app.get('/', (req, res) => {
     status: 'Server is running',
     rooms: {
       tictactoe: Object.keys(gameStates.tictactoe.rooms).length,
-      'connect-four': Object.keys(gameStates['connect-four'].rooms).length
     }
   });
 });
