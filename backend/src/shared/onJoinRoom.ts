@@ -1,11 +1,13 @@
 import { Server, Socket } from "socket.io";
 import { assignPlayerNumber } from '../games/tictactoe/state';
-import { GameRoom, SocketHandlerParams, GameType, GameRooms } from './types';
+import { GameRoom, SocketHandlerParams, GameType, GameRooms, ClientData } from './types';
 import { emitGameState } from '../games/tictactoe/handlers';
 
-export function onJoinRoom({ data, gameStates, socket, io, clientSocketMap }: SocketHandlerParams): void {
-  if (!data?.roomId || !data.clientId) return;
+type JoinRoomParams = Omit<SocketHandlerParams, 'data'> & {
+  data: Required<Pick<ClientData, 'gameType' | 'roomId' | 'clientId'>>;
+};
 
+export function onJoinRoom({ data, gameStates, socket, io, clientSocketMap }: JoinRoomParams): void {
   const { gameType, roomId, clientId } = data;
   const gameState = gameStates[gameType];
   if (!gameState) return;

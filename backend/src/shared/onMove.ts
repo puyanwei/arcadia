@@ -3,9 +3,9 @@ import { handleMove } from '../games/tictactoe/handlers';
 import { handleMakeMoveCF } from '../games/connect-four/handlers';
 
 export function onMove({ data, gameStates, socket, io, clientSocketMap }: SocketHandlerParams) {
-  if (!data?.roomId || !data.clientId) return;
+  if (!data?.roomId || !data.clientId || !data.move) return;
 
-  const { gameType, roomId, clientId } = data;
+  const { gameType, roomId, clientId, move } = data;
   const gameRooms = gameStates[gameType];
   if (!gameRooms) return;
 
@@ -15,13 +15,13 @@ export function onMove({ data, gameStates, socket, io, clientSocketMap }: Socket
     return;
   }
 
+  const params = { gameRooms, roomId, move, socket, io, clientSocketMap };
+
   if (gameType === 'tictactoe') {
-    if (!data.move) return;
-    return handleMove({ gameRooms, roomId, move: data.move, socket, io, clientSocketMap });
+    return handleMove(params);
   }
 
   if (gameType === 'connect-four') {
-    if (!data.board) return;
-    return handleMakeMoveCF(gameRooms, roomId, clientId, { board: data.board }, socket, io);
+    return handleMakeMoveCF(params);
   }
 }

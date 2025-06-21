@@ -126,7 +126,7 @@ export function TicTacToe() {
         <div className="flex flex-col items-center gap-4">
           <div className="text-center">
             <p className="text-xl text-white mb-4 font-semibold">
-              {playerStatus === "gameOver" && "Game Over!"}
+              {playerStatus === "gameOver" && gameStatus}
               {playerStatus === "rematchPending" &&
                 "🎮 Opponent wants a rematch!"}
               {playerStatus === "rematchWaiting" &&

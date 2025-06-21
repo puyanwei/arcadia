@@ -1,17 +1,15 @@
 import { Server, Socket } from 'socket.io';
 import { checkEndOfGame } from './state';
-import { Board, RematchState, PlayerNumber, GameRooms } from '../../shared/types';
+import { Board, RematchState, PlayerNumber, GameRooms, HandleMoveParams } from '../../shared/types';
 
-type HandleMoveParams = {
-  gameRooms: GameRooms;
-  roomId: string;
-  move: { index: number };
-  socket: Socket;
-  io: Server;
-  clientSocketMap: Record<string, string>;
-}
-
-export function handleMove({ gameRooms, roomId, move, socket, io, clientSocketMap }: HandleMoveParams): { newGameRooms: GameRooms } {
+export function handleMove({ 
+  gameRooms, 
+  roomId, 
+  move, 
+  socket, 
+  io, 
+  clientSocketMap 
+}: HandleMoveParams<{ index: number }>): { newGameRooms: GameRooms } {
   const room = gameRooms.rooms[roomId];
   if (!room) {
     socket.emit('error', 'Room not found.');
@@ -67,8 +65,6 @@ export function handleMove({ gameRooms, roomId, move, socket, io, clientSocketMa
   // No winner or draw, game continues
   if (!result) return { newGameRooms: gameRooms };
 
-  console.log(`[TicTacToe] Game finished. Result: ${result}`);
-  
   // Update player statuses to 'gameOver'
   room.players.forEach(playerId => {
     gameRooms.playerStatuses[playerId] = 'gameOver';

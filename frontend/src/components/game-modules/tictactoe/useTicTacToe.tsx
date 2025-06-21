@@ -4,8 +4,10 @@ import { useGameRoom } from "@/hooks/useGameRoom";
 import {
   Board,
   UseTicTacToeReturnType,
-  PlayerStatus,
   GameState,
+  StatusUpdateData,
+  BoardUpdateData,
+  PlayerJoinedData,
 } from "./types";
 import { Player } from "@/types/game";
 
@@ -20,7 +22,6 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     isMyTurn: false,
     playersInRoom: 0,
     gameStatus: "Enter a room ID to start",
-    playerStatus: null,
     rematchStatus: null,
     roomId: "",
   });
@@ -34,15 +35,8 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     if (!socket) return;
 
     // Handles the primary state machine
-    const handleStatusUpdate = ({
-      status,
-      gameResult,
-      message,
-    }: {
-      status: PlayerStatus;
-      gameResult?: "draw" | string;
-      message?: string;
-    }) => {
+    const handleStatusUpdate = (data: StatusUpdateData) => {
+      const { status, gameResult, message } = data;
       setGameState((prev) => {
         let newGameStatus = prev.gameStatus;
         if (status === "playing") {
@@ -59,18 +53,13 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         } else if (status === "rematchWaiting") {
           newGameStatus = message || "Waiting for opponent to accept...";
         }
-        return { ...prev, playerStatus: status, gameStatus: newGameStatus };
+        return { ...prev, gameStatus: newGameStatus };
       });
     };
 
     // Handles board updates
-    const handleBoardUpdate = ({
-      board,
-      currentPlayer,
-    }: {
-      board: Board;
-      currentPlayer?: string;
-    }) => {
+    const handleBoardUpdate = (data: BoardUpdateData) => {
+      const { board, currentPlayer } = data;
       setGameState((prev) => {
         const myTurn = currentPlayer === clientId;
         return {
@@ -83,13 +72,8 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     };
 
     // Handles player list updates
-    const handlePlayerJoined = ({
-      players,
-      playerCount,
-    }: {
-      players: Player[];
-      playerCount: number;
-    }) => {
+    const handlePlayerJoined = (data: PlayerJoinedData) => {
+      const { players, playerCount } = data;
       setGameState((prev) => ({
         ...prev,
         playersInRoom: playerCount,
@@ -113,7 +97,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   const makeMove = useCallback(
     (index: number) => {
       if (
-        gameState.playerStatus !== "playing" ||
+        !gameState.gameStatus.includes("turn") ||
         !gameState.isMyTurn ||
         gameState.board[index] ||
         !roomId
@@ -128,7 +112,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     },
     [
       socket,
-      gameState.playerStatus,
+      gameState.gameStatus,
       gameState.isMyTurn,
       gameState.board,
       roomId,

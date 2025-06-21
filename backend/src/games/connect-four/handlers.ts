@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { assignPlayerNumber, checkWinnerCF } from './state';
-import { ConnectFourBoard, GameRoom, PlayerNumber, GameRooms } from '../../shared/types';
+import { ConnectFourBoard, GameRoom, PlayerNumber, GameRooms, HandleMoveParams } from '../../shared/types';
 import { RematchState } from '../../shared/types';
 
 export function handleJoinRoomCF(gameRooms: GameRooms, roomId: string, playerId: string): GameRooms {
@@ -23,9 +23,23 @@ export function handleJoinRoomCF(gameRooms: GameRooms, roomId: string, playerId:
   return gameRooms;
 };
 
-export function handleMakeMoveCF(gameRooms: GameRooms, roomId: string, playerId: string, move: { board: ConnectFourBoard }, socket: Socket, io: Server): GameRooms {
+export function handleMakeMoveCF({
+  gameRooms,
+  roomId,
+  move,
+  socket,
+  io,
+  clientSocketMap,
+}: HandleMoveParams<{ board: ConnectFourBoard }>): GameRooms {
   const room = gameRooms.rooms[roomId];
   if (!room) throw new Error('Room not found');
+
+  const clientId = Object.keys(clientSocketMap).find(
+    (socketId) => clientSocketMap[socketId] === socket.id
+  );
+  if (!clientId) {
+    throw new Error("Client not found for socket");
+  }
   
   // Validate board
   if (!Array.isArray(move.board) || move.board.length !== 42) {
@@ -39,16 +53,16 @@ export function handleMakeMoveCF(gameRooms: GameRooms, roomId: string, playerId:
   room.board = move.board;
 
   // Switch current player
-  const otherPlayer = room.players.find(p => p !== playerId);
+  const otherPlayer = room.players.find(p => p !== clientId);
   if (otherPlayer) {
     room.currentPlayer = otherPlayer;
   }
 
   // Always emit updateBoard after a move
-  io.to(roomId).emit("updateBoard", { board: room.board, currentPlayer: room.currentPlayer });
+  io.to(roomId).emit("boardUpdate", { board: room.board, currentPlayer: room.currentPlayer });
   
   // Check for game end
-  const result = checkWinnerCF(room.board, 7, 6);
+  const result = checkWinnerCF(room.board as ConnectFourBoard, 7, 6);
   if (!result) return gameRooms;
 
   console.log(`[Connect Four] Game finished. Result: ${result}`);
@@ -68,7 +82,12 @@ export function handleMakeMoveCF(gameRooms: GameRooms, roomId: string, playerId:
       // If there's a winner, emit a specific event to each player
       room.players.forEach(playerId => {
         const message = playerId === winnerId ? "You won!" : "You lost!";
-        io.to(playerId).emit("gameEnd", { gameResult: winnerId, message });
+        const playerSocketId = Object.keys(clientSocketMap).find(
+          (socketId) => clientSocketMap[socketId] === playerId
+        );
+        if (playerSocketId) {
+          io.to(playerSocketId).emit("gameEnd", { gameResult: winnerId, message });
+        }
       });
     }
   }
@@ -108,7 +127,7 @@ export function handleRematchCF(
   if (currentRematchState.requestedBy !== playerId) {
     const newGameRooms = handlePlayAgainCF(gameRooms, roomId, playerId);
     
-    io.to(roomId).emit("updateBoard", Array(42).fill('valid') as ConnectFourBoard);
+    io.to(roomId).emit("boardUpdate", { board: newGameRooms.rooms[roomId].board });
     io.to(roomId).emit("gameStart", true);
     
     return { newGameRooms };

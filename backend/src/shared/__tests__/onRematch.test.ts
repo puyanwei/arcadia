@@ -17,8 +17,8 @@ describe('onRematch', () => {
     roomEmitter = { emit: vi.fn() };
     io = {
       to: vi.fn((target: string) => {
-        if (target === 'client1') return client1Socket;
-        if (target === 'client2') return client2Socket;
+        if (target === 'socket1') return client1Socket;
+        if (target === 'socket2') return client2Socket;
         if (target === 'room1') return roomEmitter;
         return { emit: vi.fn() };
       }),
@@ -72,11 +72,17 @@ describe('onRematch', () => {
     expect(gameStates.tictactoe.playerStatuses['client1']).toBe('rematchWaiting');
     expect(gameStates.tictactoe.playerStatuses['client2']).toBe('rematchPending');
 
-    expect(io.to).toHaveBeenCalledWith('client1');
-    expect(client1Socket.emit).toHaveBeenCalledWith('statusUpdate', { status: 'rematchWaiting' });
-    
-    expect(io.to).toHaveBeenCalledWith('client2');
-    expect(client2Socket.emit).toHaveBeenCalledWith('statusUpdate', { status: 'rematchPending' });
+    expect(io.to).toHaveBeenCalledWith('socket1');
+    expect(client1Socket.emit).toHaveBeenCalledWith('statusUpdate', {
+      status: 'rematchWaiting',
+      message: 'Waiting for opponent to accept...',
+    });
+
+    expect(io.to).toHaveBeenCalledWith('socket2');
+    expect(client2Socket.emit).toHaveBeenCalledWith('statusUpdate', {
+      status: 'rematchPending',
+      message: 'Opponent wants a rematch!',
+    });
   });
 
   it('should reset board and emit playing status when second player accepts', () => {

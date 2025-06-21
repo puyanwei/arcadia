@@ -1,16 +1,16 @@
-import { Board } from '@/types/game';
+import { PlayerNumber, RematchStatus } from "@/types/game";
 
-export type ConnectFourCell = 'player1' | 'player2' | 'invalid' | 'valid';
+export type ConnectFourCell = PlayerNumber | 'valid' | 'invalid' | null;
 
 export type GameState = {
   board: ConnectFourCell[];
-  playerNumber: 'player1' | 'player2' | null;
+  playerNumber: PlayerNumber | null;
   isMyTurn: boolean;
+  playersInRoom: number;
   gameStarted: boolean;
   gameFinished: boolean;
   gameStatus: string;
-  playersInRoom: number;
-  rematchStatus: RematchStatus;
+  rematchStatus: RematchStatus | null;
   roomId: string;
 };
 
@@ -20,4 +20,22 @@ export type GameActions = {
   rematch: (roomId: string) => void;
 };
 
-export type RematchStatus = "waiting" | "pending" | "accepted" | "rejected" | null; 
+// Event data types
+export type BoardUpdateData = {
+  board: ConnectFourCell[];
+  currentPlayer?: string;
+};
+
+export type PlayerNumberData = {
+  currentPlayer: PlayerNumber;
+  otherPlayer: PlayerNumber | null;
+};
+
+export type GameStartData = {
+  firstPlayer: string;
+};
+
+export type RematchStateData = {
+  status: RematchStatus;
+  message: string;
+}; 

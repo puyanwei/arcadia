@@ -1,12 +1,15 @@
-import { SocketHandlerParams } from "./types";
+import { SocketHandlerParams, ClientData } from "./types";
 import { RematchState } from "./types";
 
 function findSocketIdByClientId(clientId: string, clientSocketMap: Record<string, string>): string | undefined {
   return Object.keys(clientSocketMap).find(socketId => clientSocketMap[socketId] === clientId);
 }
 
-export function onRematch({ data, socket, io, gameStates, clientSocketMap }: SocketHandlerParams) {
-    if (!data?.clientId) return;
+type RematchParams = Omit<SocketHandlerParams, 'data'> & {
+  data: Required<Pick<ClientData, 'gameType' | 'roomId' | 'clientId'>>;
+};
+
+export function onRematch({ data, socket, io, gameStates, clientSocketMap }: RematchParams) {
     const { gameType, roomId, clientId } = data;
     
     const gameState = gameStates[gameType];

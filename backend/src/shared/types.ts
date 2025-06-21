@@ -37,20 +37,26 @@ export type GameRooms = {
 export type GameResult<T extends string = string> = (T & {}) | "draw";
 export type Cell = (string | null)
 
-export type ClientData = { 
+export type ClientData<T = any> = { 
   gameType: GameType, 
   roomId: string, 
   clientId: string,
-  move?: {
-    index: number
-  },
-  board?: ConnectFourBoard,
+  move?: T,
   playerNumber?: PlayerNumber
 };
 
-export type SocketHandlerParams = {
-  data?: ClientData;
+export type SocketHandlerParams<T = any> = {
+  data?: ClientData<T>;
   gameStates: Record<GameType, GameRooms>;
+  socket: Socket;
+  io: Server;
+  clientSocketMap: Record<string, string>;
+};
+
+export type HandleMoveParams<T> = {
+  gameRooms: GameRooms;
+  roomId: string;
+  move: T;
   socket: Socket;
   io: Server;
   clientSocketMap: Record<string, string>;

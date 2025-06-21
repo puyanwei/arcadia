@@ -4,13 +4,10 @@ import { PlayerStatus as GlobalPlayerStatus } from "@/types/game";
 
 export type Board = (PlayerNumber | null)[];
 
-export type PlayerStatus = GlobalPlayerStatus;
-
 export type GameState = Omit<
   GlobalGameState,
   "rematchStatus" | "makeMove" | "joinRoom" | "rematch"
 > & {
-  playerStatus: PlayerStatus;
   rematchStatus: RematchStatus | null;
   roomId: string;
 };
@@ -33,5 +30,22 @@ export type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & {
   isConnected: boolean;
   connectionError: string | null;
 };
+
+export type StatusUpdateData = {
+  status: GlobalPlayerStatus;
+  gameResult?: "draw" | string;
+  message?: string;
+};
+
+export type BoardUpdateData = {
+  board: Board;
+  currentPlayer?: string;
+};
+
+export type PlayerJoinedData = {
+  players: { id: string; playerNumber: PlayerNumber }[];
+  playerCount: number;
+};
+
 export type GameEndEventData = { gameResult: GameResult<string>; message: string }; 
 export type RematchStatusEventData = { status: RematchStatus; message: string };

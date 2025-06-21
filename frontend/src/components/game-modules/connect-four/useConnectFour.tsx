@@ -2,7 +2,15 @@ import { useEffect, useState } from "react";
 import { boardGrid } from "@/store/game";
 import { useSocket } from "@/hooks/useSocket";
 import { useGameRoom } from "@/hooks/useGameRoom";
-import { ConnectFourCell, GameState, GameActions } from "./types";
+import {
+  ConnectFourCell,
+  GameState,
+  GameActions,
+  BoardUpdateData,
+  PlayerNumberData,
+  GameStartData,
+  RematchStateData,
+} from "./types";
 import { GameEndEventData } from "../tictactoe/types";
 
 type UseConnectFourReturnType = GameState &
@@ -129,13 +137,8 @@ export function useConnectFour(): UseConnectFourReturnType {
   }
 
   useEffect(() => {
-    const handleUpdateBoard = ({
-      board: newBoard,
-      currentPlayer,
-    }: {
-      board: ConnectFourCell[];
-      currentPlayer?: string;
-    }) => {
+    const handleUpdateBoard = (data: BoardUpdateData) => {
+      const { board: newBoard, currentPlayer } = data;
       const cellStates = computeCellStates(newBoard);
       setGameState((prev) => {
         // If the board is completely reset (all cells are 'valid'), this is likely a rematch
@@ -174,10 +177,7 @@ export function useConnectFour(): UseConnectFourReturnType {
       });
     };
 
-    const handlePlayerNumber = (data: {
-      currentPlayer: "player1" | "player2";
-      otherPlayer: "player1" | "player2" | null;
-    }) => {
+    const handlePlayerNumber = (data: PlayerNumberData) => {
       const number = data.currentPlayer;
       setGameState((prev) => ({
         ...prev,
@@ -205,7 +205,8 @@ export function useConnectFour(): UseConnectFourReturnType {
       }));
     }
 
-    function handleGameStart({ firstPlayer }: { firstPlayer: string }) {
+    function handleGameStart(data: GameStartData) {
+      const { firstPlayer } = data;
       setGameState((prev) => {
         const myTurn = firstPlayer === clientId;
         return {
@@ -232,13 +233,8 @@ export function useConnectFour(): UseConnectFourReturnType {
       });
     }
 
-    function handleRematchState({
-      status,
-      message,
-    }: {
-      status: string | null;
-      message: string;
-    }) {
+    function handleRematchState(data: RematchStateData) {
+      const { status, message } = data;
       if (status === "accepted") {
         // When rematch is accepted, reset the game state
         setGameState((prev) => ({
@@ -251,6 +247,8 @@ export function useConnectFour(): UseConnectFourReturnType {
               ? "Your turn!"
               : "Waiting for opponent's move...",
         }));
+      } else {
+        setGameState((prev) => ({ ...prev, gameStatus: message }));
       }
     }
 
@@ -269,7 +267,7 @@ export function useConnectFour(): UseConnectFourReturnType {
       off("gameStart", handleGameStart);
       off("rematchState", handleRematchState);
     };
-  }, [on, off]);
+  }, [socket, on, off, roomId, isConnected, clientId, rows, columns]);
 
   function makeMove(index: number, roomId: string) {
     if (!gameState.gameStarted) {
