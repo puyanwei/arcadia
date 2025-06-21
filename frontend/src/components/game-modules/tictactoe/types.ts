@@ -1,26 +1,26 @@
 import { Prettify, RematchStatus } from '@/types/game';
-
-export type PlayerNumber = 'player1' | 'player2';
-export type GameResult<T extends string = string> = (T & {}) | "draw";
+import { GameState as GlobalGameState, PlayerNumber } from "@/types/game";
+import { PlayerStatus as GlobalPlayerStatus } from "@/types/game";
 
 export type Board = (PlayerNumber | null)[];
 
-export type GameState = {
-  board: Board;
-  playerNumber: PlayerNumber | null;
-  isMyTurn: boolean;
-  playersInRoom: number;
-  gameStarted: boolean;
-  gameFinished: boolean;
-  gameStatus: string;
-  rematchStatus: RematchStatus;
+export type PlayerStatus = GlobalPlayerStatus;
+
+export type GameState = Omit<
+  GlobalGameState,
+  "rematchStatus" | "makeMove" | "joinRoom" | "rematch"
+> & {
+  playerStatus: PlayerStatus;
+  rematchStatus: RematchStatus | null;
   roomId: string;
 };
 
+export type GameResult<T extends string = string> = (T & {}) | "draw";
+
 export type GameActions = {
-  makeMove: (index: number, roomId: string) => void;
+  makeMove: (index: number) => void;
   joinRoom: (roomId: string) => void;
-  rematch: (roomId: string) => void;
+  rematch: () => void;
 };
 
 export type GameRoomState = {
@@ -33,5 +33,5 @@ export type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & {
   isConnected: boolean;
   connectionError: string | null;
 };
-export type GameEndEventData = { gameResult: GameResult; message: string }; 
+export type GameEndEventData = { gameResult: GameResult<string>; message: string }; 
 export type RematchStatusEventData = { status: RematchStatus; message: string };

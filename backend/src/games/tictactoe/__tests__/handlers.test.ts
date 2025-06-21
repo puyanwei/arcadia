@@ -31,7 +31,11 @@ describe('handleMove', () => {
       playerNumbers: {
         'client1': 'player1',
         'client2': 'player2'
-      }
+      },
+      playerStatuses: {
+        'client1': 'playing',
+        'client2': 'playing',
+      },
     };
     clientSocketMap = {
       'socket1': 'client1',
@@ -40,7 +44,7 @@ describe('handleMove', () => {
     };
   });
 
-  it('should update the board and emit updateBoard event for a valid move', () => {
+  it('should update the board and emit boardUpdate event for a valid move', () => {
     const move = { index: 0 };
     const result = handleMove({ 
       gameRooms, 
@@ -52,7 +56,7 @@ describe('handleMove', () => {
     });
     expect(result.newGameRooms.rooms['room1'].board[0]).toEqual('player1');
     expect(mockIo.to).toHaveBeenCalledWith('room1');
-    expect(mockIo.emit).toHaveBeenCalledWith('updateBoard', {
+    expect(mockIo.emit).toHaveBeenCalledWith('boardUpdate', {
       board: result.newGameRooms.rooms['room1'].board,
       currentPlayer: 'client2',
     });
@@ -92,49 +96,38 @@ describe('handleMove', () => {
     expect(mockSocket.emit).toHaveBeenCalledWith('error', 'This cell is already taken.');
   });
 
-  it('should emit gameEnd event when player1 wins', () => {
+  it('should emit statusUpdate event when player1 wins', () => {
     // Setup a board where player1 can win
     gameRooms.rooms['room1'].board = ['player1', 'player1', null, 'player2', 'player2', null, null, null, null];
     gameRooms.rooms['room1'].currentPlayer = 'client1';
     const move = { index: 2 }; // Winning move for player1
     handleMove({ gameRooms, roomId: 'room1', move, socket: mockSocket as unknown as Socket, io: mockIo as Server, clientSocketMap });
-    expect(mockIo.to).toHaveBeenCalledWith('client1');
-    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { gameResult: 'client1', message: 'You won!' });
-    expect(mockIo.to).toHaveBeenCalledWith('client2');
-    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { gameResult: 'client1', message: 'You lost!' });
+    expect(mockIo.to).toHaveBeenCalledWith('room1');
+    expect(mockIo.emit).toHaveBeenCalledWith('statusUpdate', { status: 'gameOver', gameResult: 'client1' });
   });
 
-  it('should emit gameEnd event when player2 wins', () => {
+  it('should emit statusUpdate event when player2 wins', () => {
     // Setup a board where player2 can win
     gameRooms.rooms['room1'].board = ['player1', 'player1', null, 'player2', 'player2', null, 'player1', null, null];
     const move = { index: 5 }; // Winning move for player2
-    // Find which clientId is player2
-    const player2ClientId = Object.keys(gameRooms.playerNumbers).find(
-      (cid) => gameRooms.playerNumbers[cid] === 'player2'
-    )!;
+    
     // Set currentPlayer so that it's player2's turn
-    gameRooms.rooms['room1'].currentPlayer = player2ClientId;
-    // Find which socket id maps to player2ClientId
-    const socketIdForClient2 = Object.keys(clientSocketMap).find(
-      (sid) => clientSocketMap[sid] === player2ClientId
-    )!;
-    mockSocket.id = socketIdForClient2;
+    gameRooms.rooms['room1'].currentPlayer = 'client2';
+    // Find which socket id maps to player2
+    mockSocket.id = 'socket2';
+
     handleMove({ gameRooms, roomId: 'room1', move, socket: mockSocket as unknown as Socket, io: mockIo as Server, clientSocketMap });
-    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { gameResult: player2ClientId, message: 'You won!' });
-    // The other clientId
-    const player1ClientId = Object.keys(gameRooms.playerNumbers).find(
-      (cid) => gameRooms.playerNumbers[cid] !== player2ClientId
-    )!;
-    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { gameResult: player2ClientId, message: 'You lost!' });
+    expect(mockIo.to).toHaveBeenCalledWith('room1');
+    expect(mockIo.emit).toHaveBeenCalledWith('statusUpdate', { status: 'gameOver', gameResult: 'client2' });
   });
 
-  it('should emit gameEnd event on a draw move', () => {
+  it('should emit statusUpdate event on a draw move', () => {
     // Setup a board that will result in a draw
     gameRooms.rooms['room1'].board = ['player1', 'player2', 'player1', 'player1', 'player2', 'player2', 'player2', 'player1', null];
     gameRooms.rooms['room1'].currentPlayer = 'client1';
     const move = { index: 8 }; // Final move leading to a draw
     handleMove({ gameRooms, roomId: 'room1', move, socket: mockSocket as unknown as Socket, io: mockIo as Server, clientSocketMap });
     expect(mockIo.to).toHaveBeenCalledWith('room1');
-    expect(mockIo.emit).toHaveBeenCalledWith('gameEnd', { gameResult: 'draw', message: 'Game ended in a draw!' });
+    expect(mockIo.emit).toHaveBeenCalledWith('statusUpdate', { status: 'gameOver', gameResult: 'draw' });
   });
 }); 

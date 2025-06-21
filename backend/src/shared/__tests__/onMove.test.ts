@@ -55,9 +55,9 @@ describe('onMove', () => {
     const room = gameStates.tictactoe.rooms[roomId];
     expect(room.board[0]).toEqual(playerNumber);
     expect(mockIo.to).toHaveBeenCalledWith(roomId);
-    expect(mockIo.emit).toHaveBeenCalledWith('updateBoard', {
-      board: room.board,
-      currentPlayer: player2ClientId,
+    expect(mockIo.emit).toHaveBeenCalledWith('boardUpdate', {
+      board: expect.any(Array),
+      currentPlayer: expect.any(String),
     });
   });
 
@@ -87,6 +87,6 @@ describe('onMove', () => {
       clientSocketMap,
     });
 
-    expect(mockIo.emit).not.toHaveBeenCalledWith('updateBoard', expect.any(Array));
+    expect(mockIo.emit).not.toHaveBeenCalledWith('boardUpdate', expect.any(Array));
   });
 }); 

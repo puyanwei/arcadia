@@ -47,18 +47,24 @@ export function onJoinRoom({ data, gameStates, socket, io, clientSocketMap }: So
   socket.join(roomId);
   console.log(`[onJoinRoom] Player ${clientId} (${socket.id}) joined room ${roomId}. Players now: ${room.players.length}`);
 
-  // Notify players
+  // Notify players in room of the new player list
   io.to(roomId).emit('playerJoined', {
     players: room.players.map(id => ({ id, playerNumber: gameState.playerNumbers[id] })),
     playerCount: room.players.length
   });
 
-  // If room is full, start the game
-  if (room.players.length === 2) {
-    // Emit player numbers to each client individually
-    // ... (existing code to emit playerNumber)
+  // If room is not full, set first player's status to waiting
+  if (room.players.length < 2) {
+    gameState.playerStatuses[clientId] = 'waiting';
+    socket.emit('statusUpdate', { status: 'waiting' });
+  } else {
+    // If room is full, set both players' status to 'playing' and start the game
+    const player1Id = room.players[0];
+    const player2Id = room.players[1];
+    gameState.playerStatuses[player1Id] = 'playing';
+    gameState.playerStatuses[player2Id] = 'playing';
 
-    console.log(`[onJoinRoom] Room ${roomId} now has 2 players. Emitting gameStart.`);
-    io.to(roomId).emit('gameStart', { firstPlayer: room.firstPlayer });
+    io.to(roomId).emit('statusUpdate', { status: 'playing' });
+    io.to(roomId).emit('boardUpdate', { board: room.board, currentPlayer: room.firstPlayer });
   }
 }

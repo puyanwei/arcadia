@@ -15,21 +15,23 @@ export type RematchStatus = 'waiting' | 'pending' | 'accepted' | 'rejected' | nu
 export type RematchState = {
   requested: boolean;
   requestedBy: string;
-  status: RematchStatus;
+  status: 'pending' | 'accepted';
 }; 
 
 export type GameRoom = {
   id: string;
-  players: string[]; // This will store clientIds
-  board: Board | ConnectFourBoard;
+  players: string[]; // CIDs
+  board: Board | string[];
   firstPlayer?: string;
   currentPlayer?: string;
   rematchState?: RematchState;
+  status?: RoomStatus;
 };
 
 export type GameRooms = {
   rooms: Record<string, GameRoom>;
   playerNumbers: Record<string, PlayerNumber>;
+  playerStatuses: Record<string, PlayerStatus>;
 };
 
 export type GameResult<T extends string = string> = (T & {}) | "draw";
@@ -61,6 +63,10 @@ export type ConnectFourBoard = ('player1' | 'player2' | 'valid' | 'invalid')[];
 // Tic Tac Toe
 export type TicTacToeCell = Prettify<PlayerNumber | 'invalid' | 'valid'>
 export type TicTacToeBoard = TicTacToeCell[];
+
+export type RoomStatus = 'waiting' | 'playing' | 'gameOver' | 'rematchPending';
+
+export type PlayerStatus = 'waiting' | 'playing' | 'gameOver' | 'rematchPending' | 'rematchWaiting';
 
 
 

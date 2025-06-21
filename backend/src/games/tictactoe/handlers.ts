@@ -61,31 +61,31 @@ export function handleMove({ gameRooms, roomId, move, socket, io, clientSocketMa
   }
 
   // Broadcast the updated board and current player to all players in the room
-  io.to(roomId).emit("updateBoard", { board: room.board, currentPlayer: room.currentPlayer });
+  io.to(roomId).emit("boardUpdate", { board: room.board, currentPlayer: room.currentPlayer });
   
   const result = checkEndOfGame(board);
+  // No winner or draw, game continues
   if (!result) return { newGameRooms: gameRooms };
 
   console.log(`[TicTacToe] Game finished. Result: ${result}`);
+  
+  // Update player statuses to 'gameOver'
+  room.players.forEach(playerId => {
+    gameRooms.playerStatuses[playerId] = 'gameOver';
+  });
 
+  let winnerId: string | 'draw' | null = null;
   if (result === 'draw') {
-    io.to(roomId).emit("gameEnd", {
-      gameResult: 'draw',
-      message: 'Game ended in a draw!'
-    });
-  } else {
-    // Find winner's socket ID
-    const winnerId = Object.keys(gameRooms.playerNumbers).find(
-      (id) => room.players.includes(id) && gameRooms.playerNumbers[id] === result
-    );
-
-    if (winnerId) {
-      room.players.forEach(playerId => {
-        const message = playerId === winnerId ? "You won!" : "You lost!";
-        io.to(playerId).emit("gameEnd", { gameResult: winnerId, message });
-      });
-    }
+    winnerId = 'draw';
+  } else if (result) {
+    // Find the clientId of the winner
+    winnerId =
+      Object.keys(gameRooms.playerNumbers).find(
+        id => gameRooms.playerNumbers[id] === result
+      ) || null;
   }
+
+  io.to(roomId).emit('statusUpdate', { status: 'gameOver', gameResult: winnerId });
 
   return { newGameRooms: gameRooms };
 }
@@ -123,7 +123,7 @@ export function handleRematch(
     const newGameRooms = handlePlayAgain(gameRooms, roomId, playerId);
     const shouldSwapFirst = Math.random() < 0.5;
     
-    io.to(roomId).emit("updateBoard", Array(9).fill(null));
+    io.to(roomId).emit("boardUpdate", Array(9).fill(null));
     io.to(roomId).emit("gameStart", shouldSwapFirst);
     
     return { newGameRooms };

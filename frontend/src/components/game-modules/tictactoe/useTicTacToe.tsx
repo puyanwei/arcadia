@@ -1,204 +1,157 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSocket } from "@/hooks/useSocket";
 import { useGameRoom } from "@/hooks/useGameRoom";
 import {
   Board,
-  GameEndEventData,
-  GameState,
-  RematchStatusEventData,
   UseTicTacToeReturnType,
+  PlayerStatus,
+  GameState,
 } from "./types";
-import { Player, PlayerNumber } from "@/types/game";
+import { Player } from "@/types/game";
 
 export function useTicTacToe(): UseTicTacToeReturnType {
   const { socket, on, off, isConnected, connectionError, clientId } =
     useSocket();
-  const {
-    roomId,
-    gameStatus: roomGameStatus,
-    rematchStatus,
-    joinRoom,
-    rematch,
-  } = useGameRoom("tictactoe");
+  const { roomId, joinRoom, rematch } = useGameRoom("tictactoe");
+
   const [gameState, setGameState] = useState<GameState>({
     board: Array(9).fill(null),
     playerNumber: null,
     isMyTurn: false,
     playersInRoom: 0,
-    gameStarted: false,
-    gameFinished: false,
     gameStatus: "Enter a room ID to start",
+    playerStatus: null,
     rematchStatus: null,
     roomId: "",
   });
 
-  // Update roomId in gameState when it changes
+  // Sync roomId from useGameRoom hook to local state
   useEffect(() => {
     setGameState((prev) => ({ ...prev, roomId }));
   }, [roomId]);
 
   useEffect(() => {
-    on("gameStart", handleGameStart);
-    on("updateBoard", handleUpdateBoard);
-    on("playerJoined", handlePlayerJoined);
-    on("gameEnd", handleGameEnd);
-    on("rematchState", handleRematchState);
+    if (!socket) return;
 
-    return () => {
-      off("updateBoard", handleUpdateBoard);
-      off("gameStart", handleGameStart);
-      off("playerJoined", handlePlayerJoined);
-      off("gameEnd", handleGameEnd);
-      off("rematchState", handleRematchState);
-    };
-  }, [on, off]);
-
-  function handleUpdateBoard({
-    board: newBoard,
-    currentPlayer,
-  }: {
-    board: Board;
-    currentPlayer?: string;
-  }) {
-    console.log("TicTacToe handleUpdateBoard called:", {
-      newBoard,
-      isFreshBoard: newBoard.every((cell) => cell === null),
-    });
-
-    setGameState((prev) => {
-      console.log("TicTacToe handleUpdateBoard - current state:", {
-        gameFinished: prev.gameFinished,
-        gameStarted: prev.gameStarted,
-        playerNumber: prev.playerNumber,
+    // Handles the primary state machine
+    const handleStatusUpdate = ({
+      status,
+      gameResult,
+      message,
+    }: {
+      status: PlayerStatus;
+      gameResult?: "draw" | string;
+      message?: string;
+    }) => {
+      setGameState((prev) => {
+        let newGameStatus = prev.gameStatus;
+        if (status === "playing") {
+          newGameStatus = prev.isMyTurn ? "Your turn!" : "Opponent's turn!";
+        } else if (status === "waiting") {
+          newGameStatus = "Waiting for opponent...";
+        } else if (status === "gameOver") {
+          const winnerMessage =
+            gameResult === clientId ? "You won!" : "You lost!";
+          newGameStatus =
+            gameResult === "draw" ? "It's a draw." : winnerMessage;
+        } else if (status === "rematchPending") {
+          newGameStatus = message || "Opponent wants a rematch!";
+        } else if (status === "rematchWaiting") {
+          newGameStatus = message || "Waiting for opponent to accept...";
+        }
+        return { ...prev, playerStatus: status, gameStatus: newGameStatus };
       });
+    };
 
-      if (!prev.playerNumber) return { ...prev, board: newBoard };
-
-      // If the board is completely reset (all cells are null), this is likely a rematch
-      const isFreshBoard = newBoard.every((cell) => cell === null);
-
-      if (prev.gameFinished && isFreshBoard) {
-        // This is a rematch - reset the game state
-        console.log(
-          "TicTacToe handleUpdateBoard - rematch detected, resetting game state"
-        );
+    // Handles board updates
+    const handleBoardUpdate = ({
+      board,
+      currentPlayer,
+    }: {
+      board: Board;
+      currentPlayer?: string;
+    }) => {
+      setGameState((prev) => {
+        const myTurn = currentPlayer === clientId;
         return {
           ...prev,
-          board: newBoard,
-          gameStarted: true,
-          gameFinished: false,
-          isMyTurn: prev.playerNumber === "player1",
-          gameStatus:
-            prev.playerNumber === "player1" ? "Your turn!" : "Opponent's turn!",
+          board,
+          isMyTurn: myTurn,
+          gameStatus: myTurn ? "Your turn!" : "Opponent's turn!",
         };
-      }
+      });
+    };
 
-      const myTurn = currentPlayer === clientId;
-
-      return {
-        ...prev,
-        board: newBoard,
-        isMyTurn: myTurn,
-        gameStatus: myTurn ? "Your turn!" : "Opponent's turn!",
-      };
-    });
-  }
-
-  function handleGameStart({ firstPlayer }: { firstPlayer: string }) {
-    setGameState((prev) => {
-      const myTurn = firstPlayer === clientId;
-      return {
-        ...prev,
-        gameStarted: true,
-        gameFinished: false,
-        isMyTurn: myTurn,
-        gameStatus: myTurn ? "Your turn!" : "Opponent's turn!",
-      };
-    });
-  }
-
-  function handlePlayerJoined({
-    players,
-    playerCount,
-  }: {
-    players: Player[];
-    playerCount: number;
-  }) {
-    setGameState((prev) => {
-      const myPlayerInfo = players.find((p) => p.id === clientId);
-      const gameStatus =
-        playerCount < 2 ? "Waiting for opponent..." : "Game starting...";
-
-      return {
+    // Handles player list updates
+    const handlePlayerJoined = ({
+      players,
+      playerCount,
+    }: {
+      players: Player[];
+      playerCount: number;
+    }) => {
+      setGameState((prev) => ({
         ...prev,
         playersInRoom: playerCount,
-        playerNumber: myPlayerInfo?.playerNumber || prev.playerNumber,
-        gameStatus: !prev.gameStarted ? gameStatus : prev.gameStatus,
-      };
-    });
-  }
+        playerNumber:
+          players.find((p) => p.id === clientId)?.playerNumber ||
+          prev.playerNumber,
+      }));
+    };
 
-  function handleGameEnd({ gameResult, message }: GameEndEventData) {
-    console.log(
-      `[TicTacToe] handleGameEnd called. Result: ${gameResult}, Message: ${message}`
-    );
-    setGameState((prev) => ({
-      ...prev,
-      gameStarted: false,
-      gameFinished: true,
-      gameStatus: gameResult === "draw" ? "It's a tie!" : message,
-      isMyTurn: false,
-    }));
-  }
+    on("statusUpdate", handleStatusUpdate);
+    on("boardUpdate", handleBoardUpdate);
+    on("playerJoined", handlePlayerJoined);
 
-  function handleRematchState({ status, message }: RematchStatusEventData) {
-    setGameState((prev) => {
-      if (status === "accepted") {
-        // When rematch is accepted, reset the game state
-        return {
-          ...prev,
-          rematchStatus: status,
-          gameStatus: message,
-          gameFinished: false,
-          gameStarted: true,
-          isMyTurn: prev.playerNumber === "player1",
-        };
-      }
+    return () => {
+      off("statusUpdate", handleStatusUpdate);
+      off("boardUpdate", handleBoardUpdate);
+      off("playerJoined", handlePlayerJoined);
+    };
+  }, [socket, on, off, clientId]);
 
-      return {
-        ...prev,
-        rematchStatus: status,
-        gameStatus: message,
-      };
-    });
-  }
-
-  function makeMove(index: number, roomId: string) {
-    if (!gameState.gameStarted || !gameState.isMyTurn || gameState.board[index])
-      return;
-
-    socket?.emit("move", {
-      gameType: "tictactoe",
+  const makeMove = useCallback(
+    (index: number) => {
+      if (
+        gameState.playerStatus !== "playing" ||
+        !gameState.isMyTurn ||
+        gameState.board[index] ||
+        !roomId
+      )
+        return;
+      socket?.emit("move", {
+        gameType: "tictactoe",
+        roomId,
+        clientId,
+        move: { index },
+      });
+    },
+    [
+      socket,
+      gameState.playerStatus,
+      gameState.isMyTurn,
+      gameState.board,
       roomId,
       clientId,
-      move: { index },
-    });
-  }
+    ]
+  );
 
-  function joinRoomWithLog(roomId: string) {
-    if (socket) {
-    }
-    joinRoom(roomId);
-  }
+  const memoizedJoinRoom = useCallback(
+    (newRoomId: string) => {
+      joinRoom(newRoomId);
+    },
+    [joinRoom]
+  );
+
+  const memoizedRematch = useCallback(() => {
+    if (roomId) rematch();
+  }, [rematch, roomId]);
 
   return {
     ...gameState,
-    roomId,
-    gameStatus: gameState.gameStatus,
-    rematchStatus,
     makeMove,
-    joinRoom: joinRoomWithLog,
-    rematch,
+    joinRoom: memoizedJoinRoom,
+    rematch: memoizedRematch,
     isConnected,
     connectionError,
   };

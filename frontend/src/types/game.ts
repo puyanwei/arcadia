@@ -11,14 +11,20 @@ export type Player = {
   playerNumber: PlayerNumber;
 };
 
+export type PlayerStatus = 
+  | "waiting"
+  | "playing"
+  | "gameOver"
+  | "rematchPending"
+  | "rematchWaiting"
+  | null;
+
 export type RematchStatus = 'waiting' | 'pending' | 'accepted' | 'rejected' | null;
 
 export type GameState = {
   board: Board;
   playerNumber: string | null;
   isMyTurn: boolean;
-  gameStarted: boolean;
-  gameFinished: boolean;
   gameStatus: string;
   playersInRoom: number;
   rematchStatus: RematchStatus;

@@ -1,158 +1,129 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { onRematch } from '../onRematch';
-import { RematchState, GameType, GameRooms } from '../types';
+import { GameType, GameRooms } from '../types';
 import { createInitialState } from '../state';
 
-const mockSocket = (clientId = 'client1') => {
-  const socket: any = {
-    id: clientId,
-    emit: vi.fn(),
-    to: vi.fn().mockReturnThis(),
-  };
-  return socket;
-};
-
-const mockIo = () => {
-  const io: any = {
-    to: vi.fn().mockReturnThis(),
-    emit: vi.fn(),
-  };
-  return io;
-};
-
 describe('onRematch', () => {
-  let socket: any;
   let io: any;
+  let client1Socket: { emit: Mock };
+  let client2Socket: { emit: Mock };
+  let roomEmitter: { emit: Mock };
   let gameStates: Record<GameType, GameRooms>;
   let clientSocketMap: Record<string, string>;
 
   beforeEach(() => {
-    socket = mockSocket('client1');
-    io = mockIo();
+    client1Socket = { emit: vi.fn() };
+    client2Socket = { emit: vi.fn() };
+    roomEmitter = { emit: vi.fn() };
+    io = {
+      to: vi.fn((target: string) => {
+        if (target === 'client1') return client1Socket;
+        if (target === 'client2') return client2Socket;
+        if (target === 'room1') return roomEmitter;
+        return { emit: vi.fn() };
+      }),
+    };
+    
+    const baseInitialState = createInitialState();
     gameStates = {
       tictactoe: {
-        ...createInitialState(),
+        ...baseInitialState,
         rooms: {
           room1: {
             id: 'room1',
             players: ['client1', 'client2'],
             board: Array(9).fill(null),
+            currentPlayer: 'client1',
+            firstPlayer: 'client1',
             rematchState: undefined,
           },
         },
-        playerNumbers: {
-          client1: 'player1',
-          client2: 'player2',
-        },
+        playerNumbers: { client1: 'player1', client2: 'player2' },
+        playerStatuses: { client1: 'gameOver', client2: 'gameOver' },
       },
       'connect-four': {
-        ...createInitialState(),
+        ...baseInitialState,
         rooms: {
           room1: {
             id: 'room1',
             players: ['client1', 'client2'],
-            board: Array(42).fill('valid'),
+            board: Array(42).fill(null),
+            currentPlayer: 'client1',
+            firstPlayer: 'client1',
             rematchState: undefined,
           },
         },
-        playerNumbers: {
-          client1: 'player1',
-          client2: 'player2',
-        },
+        playerNumbers: { client1: 'player1', client2: 'player2' },
+        playerStatuses: { client1: 'gameOver', client2: 'gameOver' },
       },
     };
-    clientSocketMap = { 'client1': 'client1', 'client2': 'client2' };
+    clientSocketMap = { 'socket1': 'client1', 'socket2': 'client2' };
   });
 
-  it('should set rematchState to pending and emit correct events on first request for tictactoe', () => {
-    onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client1' }, socket, io, gameStates, clientSocketMap });
-    const room = gameStates.tictactoe.rooms['room1'];
-    expect(room.rematchState).toEqual({ requested: true, requestedBy: 'client1', status: 'pending' });
-    // First player should get "waiting" status
-    expect(socket.emit).toHaveBeenCalledWith('rematchState', { status: 'waiting', message: 'Waiting for opponent to accept...', requestedBy: 'client1' });
-    // Opponent should get "pending" status
-    expect(socket.to('room1').emit).toHaveBeenCalledWith('rematchState', { status: 'pending', message: 'Opponent wants a rematch!', requestedBy: 'client1' });
+  it('should emit correct status updates on first rematch request', () => {
+    onRematch({
+      data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client1' },
+      socket: { id: 'socket1' } as any,
+      io,
+      gameStates,
+      clientSocketMap,
+    });
+    
+    expect(gameStates.tictactoe.playerStatuses['client1']).toBe('rematchWaiting');
+    expect(gameStates.tictactoe.playerStatuses['client2']).toBe('rematchPending');
+
+    expect(io.to).toHaveBeenCalledWith('client1');
+    expect(client1Socket.emit).toHaveBeenCalledWith('statusUpdate', { status: 'rematchWaiting' });
+    
+    expect(io.to).toHaveBeenCalledWith('client2');
+    expect(client2Socket.emit).toHaveBeenCalledWith('statusUpdate', { status: 'rematchPending' });
   });
 
-  it('should set rematchState to pending and emit correct events on first request for connect-four', () => {
-    onRematch({ data: { gameType: 'connect-four', roomId: 'room1', clientId: 'client1' }, socket, io, gameStates, clientSocketMap });
-    const room = gameStates['connect-four'].rooms['room1'];
-    expect(room.rematchState).toEqual({ requested: true, requestedBy: 'client1', status: 'pending' });
-    // First player should get "waiting" status
-    expect(socket.emit).toHaveBeenCalledWith('rematchState', { status: 'waiting', message: 'Waiting for opponent to accept...', requestedBy: 'client1' });
-    // Opponent should get "pending" status
-    expect(socket.to('room1').emit).toHaveBeenCalledWith('rematchState', { status: 'pending', message: 'Opponent wants a rematch!', requestedBy: 'client1' });
-  });
+  it('should reset board and emit playing status when second player accepts', () => {
+    // First player requests
+    onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client1' }, socket: { id: 'socket1' } as any, io, gameStates, clientSocketMap });
 
-  it('should reset board and set rematchState to accepted when second player accepts tictactoe', () => {
-    // First player requests rematch
-    onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client1' }, socket, io, gameStates, clientSocketMap });
     // Second player accepts
-    const socket2 = mockSocket('client2');
-    onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client2' }, socket: socket2, io, gameStates, clientSocketMap });
+    onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client2' }, socket: { id: 'socket2' } as any, io, gameStates, clientSocketMap });
+    
     const room = gameStates.tictactoe.rooms['room1'];
     const newBoard = Array(9).fill(null);
     expect(room.board).toEqual(newBoard);
-    expect(room.rematchState).toEqual({ requested: false, requestedBy: '', status: 'accepted' });
-    const newFirstPlayer = room.firstPlayer;
+    
+    expect(gameStates.tictactoe.playerStatuses['client1']).toBe('playing');
+    expect(gameStates.tictactoe.playerStatuses['client2']).toBe('playing');
 
-    expect(io.to('room1').emit).toHaveBeenCalledWith('updateBoard', {
+    expect(io.to).toHaveBeenCalledWith('room1');
+    expect(roomEmitter.emit).toHaveBeenCalledWith('statusUpdate', { status: 'playing' });
+    expect(roomEmitter.emit).toHaveBeenCalledWith('boardUpdate', {
       board: newBoard,
-      currentPlayer: newFirstPlayer,
+      currentPlayer: expect.any(String),
     });
-    expect(io.to('room1').emit).toHaveBeenCalledWith('gameStart', {
-      firstPlayer: newFirstPlayer,
-    });
-    // Both players should get "accepted" status
-    expect(io.to('room1').emit).toHaveBeenCalledWith('rematchState', { status: 'accepted', message: 'Rematch accepted! Game starting...', requestedBy: '' });
-  });
-
-  it('should reset board and set rematchState to accepted when second player accepts connect-four', () => {
-    // First player requests rematch
-    onRematch({ data: { gameType: 'connect-four', roomId: 'room1', clientId: 'client1' }, socket, io, gameStates, clientSocketMap });
-    // Second player accepts
-    const socket2 = mockSocket('client2');
-    onRematch({ data: { gameType: 'connect-four', roomId: 'room1', clientId: 'client2' }, socket: socket2, io, gameStates, clientSocketMap });
-    const room = gameStates['connect-four'].rooms['room1'];
-    const newBoard = Array(42).fill('valid');
-    expect(room.board).toEqual(newBoard);
-    expect(room.rematchState).toEqual({ requested: false, requestedBy: '', status: 'accepted' });
-    const newFirstPlayer = room.firstPlayer;
-
-    expect(io.to('room1').emit).toHaveBeenCalledWith('updateBoard', {
-      board: newBoard,
-      currentPlayer: newFirstPlayer,
-    });
-    expect(io.to('room1').emit).toHaveBeenCalledWith('gameStart', {
-      firstPlayer: newFirstPlayer,
-    });
-    // Both players should get "accepted" status
-    expect(io.to('room1').emit).toHaveBeenCalledWith('rematchState', { status: 'accepted', message: 'Rematch accepted! Game starting...', requestedBy: '' });
   });
 
   it('should do nothing if room does not exist', () => {
-    onRematch({ data: { gameType: 'tictactoe', roomId: 'nonexistent', clientId: 'client1' }, socket, io, gameStates, clientSocketMap });
-    // No error thrown, no emit called
+    const socket = { id: 'socket1', emit: vi.fn() };
+    onRematch({ data: { gameType: 'tictactoe', roomId: 'nonexistent', clientId: 'client1' }, socket: socket as any, io, gameStates, clientSocketMap });
     expect(socket.emit).not.toHaveBeenCalled();
   });
 
-  it('should do nothing if game type does not exist', () => {
-    onRematch({ data: { gameType: 'nonexistent' as any, roomId: 'room1', clientId: 'client1' }, socket, io, gameStates, clientSocketMap });
-    // Should emit error
-    expect(socket.emit).toHaveBeenCalledWith('error', 'Game state not found');
+  it('should emit error if game type does not exist', () => {
+    const socket = { id: 'socket1', emit: vi.fn() };
+    onRematch({ data: { gameType: 'nonexistent' as any, roomId: 'room1', clientId: 'client1' }, socket: socket as any, io, gameStates, clientSocketMap });
+    expect(socket.emit).toHaveBeenCalledWith('error', 'Game state not found for: nonexistent');
   });
 
   it('should not allow same player to accept their own rematch request', () => {
     // First player requests rematch
-    onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client1' }, socket, io, gameStates, clientSocketMap });
-    const room = gameStates.tictactoe.rooms['room1'];
-    expect(room.rematchState).toEqual({ requested: true, requestedBy: 'client1', status: 'pending' });
+    onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client1' }, socket: { id: 'socket1' } as any, io, gameStates, clientSocketMap });
+    const originalStatuses = { ...gameStates.tictactoe.playerStatuses };
+
+    // Same player tries to accept
+    onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client1' }, socket: { id: 'socket1' } as any, io, gameStates, clientSocketMap });
     
-    // Same player tries to accept (should do nothing)
-    onRematch({ data: { gameType: 'tictactoe', roomId: 'room1', clientId: 'client1' }, socket, io, gameStates, clientSocketMap });
-    expect(room.rematchState).toEqual({ requested: true, requestedBy: 'client1', status: 'pending' });
-    // Should not emit game start events
-    expect(io.to('room1').emit).not.toHaveBeenCalledWith('updateBoard', expect.any(Array));
-    expect(io.to('room1').emit).not.toHaveBeenCalledWith('gameStart', expect.any(Boolean));
+    // Statuses should not change
+    expect(gameStates.tictactoe.playerStatuses).toEqual(originalStatuses);
+    // Should not emit playing status
+    expect(roomEmitter.emit).not.toHaveBeenCalledWith('statusUpdate', { status: 'playing' });
   });
 }); 

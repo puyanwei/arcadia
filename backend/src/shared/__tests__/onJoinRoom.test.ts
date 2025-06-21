@@ -75,9 +75,16 @@ describe('onJoinRoom', () => {
     const player2Number = gameStates.tictactoe.playerNumbers[clientId2]
 
     expect(player2Number).toBe(player1Number === 'player1' ? 'player2' : 'player1')
-    expect(mockIo.emit).toHaveBeenCalledWith('gameStart', {
-      firstPlayer: expect.any(String),
-    })
+    
+    // Check for game start events
+    expect(mockIo.emit).toHaveBeenCalledWith('playerJoined', expect.objectContaining({
+      playerCount: 2
+    }));
+    expect(mockIo.emit).toHaveBeenCalledWith('statusUpdate', { status: 'playing' });
+    expect(mockIo.emit).toHaveBeenCalledWith('boardUpdate', expect.objectContaining({
+      board: expect.any(Array),
+      currentPlayer: expect.any(String)
+    }));
   })
 
   it('should not allow more than 2 players in a room', () => {
