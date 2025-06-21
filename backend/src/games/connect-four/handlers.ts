@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { assignPlayerNumber } from './state';
+import { assignPlayerNumber, checkWinnerCF } from './state';
 import { ConnectFourBoard, GameRoom, PlayerNumber, GameRooms } from '../../shared/types';
 import { RematchState } from '../../shared/types';
 
@@ -23,7 +23,7 @@ export function handleJoinRoomCF(gameRooms: GameRooms, roomId: string, playerId:
   return gameRooms;
 };
 
-export function handleMakeMoveCF(gameRooms: GameRooms, roomId: string, playerId: string, move: { board: ConnectFourBoard }): GameRooms {
+export function handleMakeMoveCF(gameRooms: GameRooms, roomId: string, playerId: string, move: { board: ConnectFourBoard }, socket: Socket, io: Server): GameRooms {
   const room = gameRooms.rooms[roomId];
   if (!room) throw new Error('Room not found');
   
@@ -37,6 +37,42 @@ export function handleMakeMoveCF(gameRooms: GameRooms, roomId: string, playerId:
   }
 
   room.board = move.board;
+
+  // Switch current player
+  const otherPlayer = room.players.find(p => p !== playerId);
+  if (otherPlayer) {
+    room.currentPlayer = otherPlayer;
+  }
+
+  // Always emit updateBoard after a move
+  io.to(roomId).emit("updateBoard", { board: room.board, currentPlayer: room.currentPlayer });
+  
+  // Check for game end
+  const result = checkWinnerCF(room.board, 7, 6);
+  if (!result) return gameRooms;
+
+  console.log(`[Connect Four] Game finished. Result: ${result}`);
+
+  if (result === 'draw') {
+    io.to(roomId).emit("gameEnd", { 
+      gameResult: 'draw', 
+      message: 'Game ended in a draw!'
+    });
+  } else {
+    // Find winner's socket ID
+    const winnerId = Object.keys(gameRooms.playerNumbers).find(
+      (id) => room.players.includes(id) && gameRooms.playerNumbers[id] === result
+    );
+
+    if (winnerId) {
+      // If there's a winner, emit a specific event to each player
+      room.players.forEach(playerId => {
+        const message = playerId === winnerId ? "You won!" : "You lost!";
+        io.to(playerId).emit("gameEnd", { gameResult: winnerId, message });
+      });
+    }
+  }
+  
   return gameRooms;
 };
 

@@ -4,7 +4,7 @@
   "description": "Backend server for Arcadia",
   "main": "dist/server.js",
   "scripts": {
-    "test": "vitest --reporter=verbose",
+    "test": "vitest run --reporter=verbose",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",

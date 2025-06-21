@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSocket } from "@/hooks/useSocket";
-import { useGameRoom, RematchStatus, PlayerNumber } from "@/hooks/useGameRoom";
+import { useGameRoom } from "@/hooks/useGameRoom";
 import {
   Board,
   GameEndEventData,
@@ -8,10 +8,18 @@ import {
   RematchStatusEventData,
   UseTicTacToeReturnType,
 } from "./types";
+import { Player, PlayerNumber } from "@/types/game";
 
 export function useTicTacToe(): UseTicTacToeReturnType {
-  const { socket, on, off, isConnected, connectionError } = useSocket();
-  const { roomState, joinRoom, rematch } = useGameRoom("tictactoe");
+  const { socket, on, off, isConnected, connectionError, clientId } =
+    useSocket();
+  const {
+    roomId,
+    gameStatus: roomGameStatus,
+    rematchStatus,
+    joinRoom,
+    rematch,
+  } = useGameRoom("tictactoe");
   const [gameState, setGameState] = useState<GameState>({
     board: Array(9).fill(null),
     playerNumber: null,
@@ -21,19 +29,23 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     gameFinished: false,
     gameStatus: "Enter a room ID to start",
     rematchStatus: null,
+    roomId: "",
   });
+
+  // Update roomId in gameState when it changes
+  useEffect(() => {
+    setGameState((prev) => ({ ...prev, roomId }));
+  }, [roomId]);
 
   useEffect(() => {
     on("gameStart", handleGameStart);
     on("updateBoard", handleUpdateBoard);
-    on("playerNumber", handlePlayerNumber);
     on("playerJoined", handlePlayerJoined);
     on("gameEnd", handleGameEnd);
     on("rematchState", handleRematchState);
 
     return () => {
       off("updateBoard", handleUpdateBoard);
-      off("playerNumber", handlePlayerNumber);
       off("gameStart", handleGameStart);
       off("playerJoined", handlePlayerJoined);
       off("gameEnd", handleGameEnd);
@@ -41,7 +53,13 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     };
   }, [on, off]);
 
-  function handleUpdateBoard(newBoard: Board) {
+  function handleUpdateBoard({
+    board: newBoard,
+    currentPlayer,
+  }: {
+    board: Board;
+    currentPlayer?: string;
+  }) {
     console.log("TicTacToe handleUpdateBoard called:", {
       newBoard,
       isFreshBoard: newBoard.every((cell) => cell === null),
@@ -75,16 +93,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         };
       }
 
-      const xCount = newBoard.filter((cell) => cell === "player1").length;
-      const oCount = newBoard.filter((cell) => cell === "player2").length;
-      const myTurn =
-        prev.playerNumber === "player1" ? xCount === oCount : xCount > oCount;
-
-      console.log("TicTacToe handleUpdateBoard - normal board update:", {
-        myTurn,
-        xCount,
-        oCount,
-      });
+      const myTurn = currentPlayer === clientId;
 
       return {
         ...prev,
@@ -95,47 +104,9 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     });
   }
 
-  function handlePlayerNumber(data: {
-    currentPlayer: PlayerNumber;
-    otherPlayer: PlayerNumber | null;
-  }) {
-    setGameState((prev) => ({
-      ...prev,
-      playerNumber: data.currentPlayer,
-      isMyTurn: data.currentPlayer === "player1",
-      gameStatus:
-        data.currentPlayer === "player1"
-          ? "You're X - you go first!"
-          : "You're O - waiting for X to make the first move...",
-    }));
-  }
-
-  function handleGameStart() {
-    console.log("TicTacToe handleGameStart called");
+  function handleGameStart({ firstPlayer }: { firstPlayer: string }) {
     setGameState((prev) => {
-      console.log("TicTacToe handleGameStart - current state:", {
-        gameFinished: prev.gameFinished,
-        gameStarted: prev.gameStarted,
-        playerNumber: prev.playerNumber,
-      });
-
-      if (!prev.playerNumber) {
-        console.log(
-          "TicTacToe handleGameStart - no player number, setting gameStarted"
-        );
-        return { ...prev, gameStarted: true, gameFinished: false };
-      }
-      const xCount = prev.board.filter((cell) => cell === "player1").length;
-      const oCount = prev.board.filter((cell) => cell === "player2").length;
-      const myTurn =
-        prev.playerNumber === "player1" ? xCount === oCount : xCount > oCount;
-
-      console.log("TicTacToe handleGameStart - resetting game state:", {
-        myTurn,
-        xCount,
-        oCount,
-      });
-
+      const myTurn = firstPlayer === clientId;
       return {
         ...prev,
         gameStarted: true,
@@ -146,16 +117,31 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     });
   }
 
-  function handlePlayerJoined(count: number) {
-    setGameState((prev) => ({
-      ...prev,
-      playersInRoom: count,
-      gameStatus: count === 2 ? "Game starting..." : "Waiting for opponent...",
-    }));
+  function handlePlayerJoined({
+    players,
+    playerCount,
+  }: {
+    players: Player[];
+    playerCount: number;
+  }) {
+    setGameState((prev) => {
+      const myPlayerInfo = players.find((p) => p.id === clientId);
+      const gameStatus =
+        playerCount < 2 ? "Waiting for opponent..." : "Game starting...";
+
+      return {
+        ...prev,
+        playersInRoom: playerCount,
+        playerNumber: myPlayerInfo?.playerNumber || prev.playerNumber,
+        gameStatus: !prev.gameStarted ? gameStatus : prev.gameStatus,
+      };
+    });
   }
 
   function handleGameEnd({ gameResult, message }: GameEndEventData) {
-    console.log("handleGameEnd received:", { gameResult, message });
+    console.log(
+      `[TicTacToe] handleGameEnd called. Result: ${gameResult}, Message: ${message}`
+    );
     setGameState((prev) => ({
       ...prev,
       gameStarted: false,
@@ -166,18 +152,9 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   function handleRematchState({ status, message }: RematchStatusEventData) {
-    console.log("TicTacToe handleRematchState called:", { status, message });
     setGameState((prev) => {
-      console.log("TicTacToe current state before rematch:", {
-        gameFinished: prev.gameFinished,
-        gameStarted: prev.gameStarted,
-        rematchStatus: prev.rematchStatus,
-        playerNumber: prev.playerNumber,
-      });
-
       if (status === "accepted") {
         // When rematch is accepted, reset the game state
-        console.log("TicTacToe rematch accepted - resetting game state");
         return {
           ...prev,
           rematchStatus: status,
@@ -188,7 +165,6 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         };
       }
 
-      console.log("TicTacToe rematch state updated:", { status, message });
       return {
         ...prev,
         rematchStatus: status,
@@ -201,21 +177,11 @@ export function useTicTacToe(): UseTicTacToeReturnType {
     if (!gameState.gameStarted || !gameState.isMyTurn || gameState.board[index])
       return;
 
-    // Optimistically update the board
-    const newBoard = [...gameState.board];
-    newBoard[index] = gameState.playerNumber;
-    setGameState((prev) => ({
-      ...prev,
-      board: newBoard,
-      isMyTurn: false, // After move, it's not your turn
-      gameStatus: "Opponent's turn!",
-    }));
-
     socket?.emit("move", {
       gameType: "tictactoe",
       roomId,
-      board: newBoard,
-      playerNumber: gameState.playerNumber,
+      clientId,
+      move: { index },
     });
   }
 
@@ -226,12 +192,10 @@ export function useTicTacToe(): UseTicTacToeReturnType {
   }
 
   return {
-    ...roomState,
     ...gameState,
-    gameStatus:
-      gameState.gameStarted || gameState.gameFinished
-        ? gameState.gameStatus
-        : roomState.gameStatus,
+    roomId,
+    gameStatus: gameState.gameStatus,
+    rematchStatus,
     makeMove,
     joinRoom: joinRoomWithLog,
     rematch,

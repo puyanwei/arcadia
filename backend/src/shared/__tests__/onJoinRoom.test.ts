@@ -1,108 +1,100 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { onJoinRoom } from '../onJoinRoom'
-import { GameRooms } from '../types'
-import { Socket, Server } from 'socket.io'
-import { DefaultEventsMap } from 'socket.io/dist/typed-events'
+import { GameRooms, GameType } from '../types'
+import { createInitialState } from '../state'
 
 describe('onJoinRoom', () => {
-  let mockSocket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap>
-  let mockIo: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap>
-  let gameStates: Record<string, GameRooms>
-  const originalRandom = Math.random
+  let mockIo: any
+  let mockSocket: any
+  let gameStates: Record<GameType, GameRooms>
+  let clientSocketMap: Record<string, string>
 
   beforeEach(() => {
+    mockIo = {
+      to: vi.fn().mockReturnThis(),
+      emit: vi.fn(),
+    }
     mockSocket = {
       id: 'socket1',
-      emit: vi.fn(),
       join: vi.fn(),
-      nsp: {},
-      client: {},
-      recovered: false,
-      handshake: {},
-      connected: true,
-      disconnected: false
-    } as unknown as Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap>
-
-    mockIo = {
-      to: vi.fn().mockReturnValue({
-        emit: vi.fn()
-      }),
-      sockets: {},
-      engine: {},
-      httpServer: {},
-      _parser: {}
-    } as unknown as Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap>
-
+      emit: vi.fn(),
+    }
     gameStates = {
-      tictactoe: {
-        rooms: {},
-        playerNumbers: {}
-      }
+      tictactoe: createInitialState(),
+      'connect-four': createInitialState(),
     }
+    clientSocketMap = {}
   })
 
-  afterEach(() => {
-    Math.random = originalRandom
-    vi.clearAllMocks()
-  })
-
-  it('should randomly assign player1 or player2 to first player', async () => {
-    // Mock Math.random to return 0.3 (less than 0.5, so player1)
-    Math.random = vi.fn(() => 0.3)
-
-    await onJoinRoom({
-      data: { gameType: 'tictactoe', roomId: 'room1', playerNumber: 'player1' },
+  it('should add a player to a new room and assign a player number', () => {
+    const roomId = 'room1'
+    const clientId = 'client1'
+    
+    onJoinRoom({
+      data: { gameType: 'tictactoe', roomId, clientId },
+      gameStates,
       socket: mockSocket,
       io: mockIo,
-      gameStates
+      clientSocketMap,
     })
 
-    expect(mockSocket.emit).toHaveBeenCalledWith('playerNumber', {
-      currentPlayer: 'player1',
-      otherPlayer: undefined
+    const room = gameStates.tictactoe.rooms[roomId]
+    expect(room).toBeDefined()
+    expect(room.players).toContain(clientId)
+    expect(clientSocketMap[mockSocket.id]).toBe(clientId)
+    expect(mockSocket.join).toHaveBeenCalledWith(roomId)
+    expect(mockIo.to).toHaveBeenCalledWith(roomId)
+    expect(mockIo.emit).toHaveBeenCalledWith('playerJoined', expect.any(Object))
+    const playerNumber = gameStates.tictactoe.playerNumbers[clientId]
+    expect(['player1', 'player2']).toContain(playerNumber)
+  })
+
+  it('should assign the other player number to the second player', () => {
+    const roomId = 'room1'
+    const clientId1 = 'client1'
+    const clientId2 = 'client2'
+
+    // First player joins
+    onJoinRoom({
+      data: { gameType: 'tictactoe', roomId, clientId: clientId1 },
+      gameStates,
+      socket: { ...mockSocket, id: 'socket1' },
+      io: mockIo,
+      clientSocketMap,
+    })
+    const player1Number = gameStates.tictactoe.playerNumbers[clientId1]
+
+    // Second player joins
+    onJoinRoom({
+      data: { gameType: 'tictactoe', roomId, clientId: clientId2 },
+      gameStates,
+      socket: { ...mockSocket, id: 'socket2' },
+      io: mockIo,
+      clientSocketMap,
+    })
+    const player2Number = gameStates.tictactoe.playerNumbers[clientId2]
+
+    expect(player2Number).toBe(player1Number === 'player1' ? 'player2' : 'player1')
+    expect(mockIo.emit).toHaveBeenCalledWith('gameStart', {
+      firstPlayer: expect.any(String),
     })
   })
 
-  it('should assign opposite player number to second player', async () => {
-    // Setup room with first player
-    gameStates.tictactoe.rooms['room1'] = {
-      id: 'room1',
-      players: ['socket2'],
-      board: Array(9).fill(null)
-    }
-    gameStates.tictactoe.playerNumbers['socket2'] = 'player1'
+  it('should not allow more than 2 players in a room', () => {
+    const roomId = 'room1'
+    const clientIds = ['c1', 'c2', 'c3']
 
-    await onJoinRoom({
-      data: { gameType: 'tictactoe', roomId: 'room1', playerNumber: 'player2' },
-      socket: mockSocket,
-      io: mockIo,
-      gameStates
-    })
+    // Two players join
+    onJoinRoom({ data: { gameType: 'tictactoe', roomId, clientId: clientIds[0] }, gameStates, socket: { ...mockSocket, id: 's1' } as any, io: mockIo, clientSocketMap });
+    onJoinRoom({ data: { gameType: 'tictactoe', roomId, clientId: clientIds[1] }, gameStates, socket: { ...mockSocket, id: 's2' } as any, io: mockIo, clientSocketMap });
 
-    expect(mockSocket.emit).toHaveBeenCalledWith('playerNumber', {
-      currentPlayer: 'player2',
-      otherPlayer: 'player1'
-    })
+    const thirdSocket = { id: 's3', emit: vi.fn(), join: vi.fn() };
+
+    // Third player tries to join
+    onJoinRoom({ data: { gameType: 'tictactoe', roomId, clientId: clientIds[2] }, gameStates, socket: thirdSocket as any, io: mockIo, clientSocketMap });
+
+    const room = gameStates.tictactoe.rooms[roomId];
+    expect(room.players.length).toBe(2);
+    expect(thirdSocket.emit).toHaveBeenCalledWith('error', 'This room is full.')
   })
-
-  it('should not allow more than 2 players in a room', async () => {
-    // Setup room with two players
-    gameStates.tictactoe.rooms['room1'] = {
-      id: 'room1',
-      players: ['socket1', 'socket2'],
-      board: Array(9).fill(null)
-    };
-    gameStates.tictactoe.playerNumbers['socket1'] = 'player1';
-    gameStates.tictactoe.playerNumbers['socket2'] = 'player2';
-
-    await onJoinRoom({
-      data: { gameType: 'tictactoe', roomId: 'room1', playerNumber: 'player1' },
-      socket: mockSocket,
-      io: mockIo,
-      gameStates
-    });
-
-    expect(mockSocket.emit).toHaveBeenCalledWith('error', 'Room is full');
-    expect(gameStates.tictactoe.rooms['room1'].players.length).toBe(2);
-  });
 }) 

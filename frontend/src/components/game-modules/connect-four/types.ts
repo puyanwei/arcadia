@@ -11,6 +11,7 @@ export type GameState = {
   gameStatus: string;
   playersInRoom: number;
   rematchStatus: RematchStatus;
+  roomId: string;
 };
 
 export type GameActions = {

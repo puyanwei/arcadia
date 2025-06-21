@@ -3,7 +3,8 @@ import { createServer } from "http";
 import { Server, Socket } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
-import {  OverallGameState, ClientData } from './shared/types';
+import {  OverallGameState, ClientData, GameType, GameRooms, SocketHandlerParams } from './shared/types';
+import { createInitialState } from './shared/state';
 import { handleMove } from "./games/tictactoe/handlers";
 import { onJoinRoom } from "./shared/onJoinRoom";
 import { onDisconnect } from "./shared/onDisconnect";
@@ -12,10 +13,12 @@ import { onMove } from "./shared/onMove";
 
 dotenv.config();
 
-const gameStates: OverallGameState = {
-  tictactoe: { rooms: {}, playerNumbers: {} },
-  'connect-four': { rooms: {}, playerNumbers: {} }
+const gameStates: Record<GameType, GameRooms> = {
+  'tictactoe': createInitialState(),
+  'connect-four': createInitialState()
 };
+
+const clientSocketMap: Record<string, string> = {};
 
 // Environment variable validation
 const requiredEnvVars = {
@@ -88,72 +91,21 @@ const io = new Server(httpServer, {
   transports: ['websocket', 'polling']
 });
 
-// Track active connections
-const activeConnections = new Map<string, { 
-  count: number; 
-  lastSeen: Date;
-  socketIds: Set<string>;
-  tabs: number;
-}>();
-
 io.on('connection', (socket) => {
-  const clientId = socket.handshake.auth.clientId || socket.id;
-  const now = new Date();
-  
-  // Update connection tracking
-  const existingConnection = activeConnections.get(clientId);
-  activeConnections.set(clientId, {
-    count: (existingConnection?.count || 0) + 1,
-    lastSeen: now,
-    socketIds: new Set([...(existingConnection?.socketIds || []), socket.id]),
-    tabs: (existingConnection?.tabs || 0) + 1
-  });
+  console.log(`[Socket] Client connected - Socket ID: ${socket.id}`);
 
-  console.log(`[Socket] Client connected - ID: ${clientId}, Socket ID: ${socket.id}`);
-  console.log(`[Socket] Active tabs for client ${clientId}: ${activeConnections.get(clientId)?.tabs}`);
-  console.log(`[Socket] Total unique clients: ${activeConnections.size}`);
+  const handlerParams: SocketHandlerParams = {
+    socket,
+    io,
+    gameStates,
+    clientSocketMap,
+  };
 
-  // Monitor connection health
-  socket.on('ping', () => {
-    const connection = activeConnections.get(clientId);
-    if (connection) {
-      connection.lastSeen = new Date();
-      activeConnections.set(clientId, connection);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    const connection = activeConnections.get(clientId);
-    if (connection) {
-      connection.socketIds.delete(socket.id);
-      connection.tabs = Math.max(0, connection.tabs - 1);
-      
-      if (connection.tabs === 0) {
-        activeConnections.delete(clientId);
-        console.log(`[Socket] Removed all connections for client ${clientId}`);
-      } else {
-        activeConnections.set(clientId, connection);
-        console.log(`[Socket] Client ${clientId} now has ${connection.tabs} active tabs`);
-      }
-    }
-  });
-
-  socket.on("joinRoom", (data: ClientData) => onJoinRoom({ data, gameStates, socket, io }));
-  socket.on("rematch", (data: ClientData) => onRematch({ data, socket, io, gameStates }));
-  socket.on("disconnect", () => onDisconnect({ socket, io, gameStates }));
-  socket.on("move", (data: ClientData) => onMove({ data, gameStates, socket, io }));
+  socket.on('joinRoom', (data: ClientData) => onJoinRoom({ ...handlerParams, data }));
+  socket.on('move', (data: ClientData) => onMove({ ...handlerParams, data }));
+  socket.on('rematch', (data: ClientData) => onRematch({ ...handlerParams, data }));
+  socket.on('disconnect', () => onDisconnect(handlerParams));
 });
-
-// Cleanup stale connections every 5 minutes
-setInterval(() => {
-  const now = new Date();
-  for (const [clientId, connection] of activeConnections.entries()) {
-    if (now.getTime() - connection.lastSeen.getTime() > 5 * 60 * 1000) {
-      activeConnections.delete(clientId);
-      console.log(`[Socket] Removed stale connection for client ${clientId}`);
-    }
-  }
-}, 5 * 60 * 1000);
 
 httpServer.listen(PORT, HOST, () => {
   console.log(`Server running on ${HOST}:${PORT}`);

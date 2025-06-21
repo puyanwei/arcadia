@@ -1,10 +1,10 @@
 import { SocketHandlerParams } from "./types";
 import { RematchState } from "./types";
 
-export function onRematch({ data, socket, io, gameStates }: SocketHandlerParams) {
-    if (!data) return;
-    const { gameType, roomId } = data;
-    console.log("Backend onRematch called:", { gameType, roomId });
+export function onRematch({ data, socket, io, gameStates, clientSocketMap }: SocketHandlerParams) {
+    if (!data?.clientId) return;
+    const { gameType, roomId, clientId } = data;
+    console.log("Backend onRematch called:", { gameType, roomId, clientId });
     
     const gameRooms = gameStates[gameType];
     if (!gameRooms) {
@@ -18,7 +18,6 @@ export function onRematch({ data, socket, io, gameStates }: SocketHandlerParams)
       return;
     }
   
-    const clientId = socket.handshake.auth && socket.handshake.auth.clientId ? socket.handshake.auth.clientId : socket.id;
     const currentRematchState = room.rematchState;
     console.log("Backend onRematch - current state:", {
       clientId,
@@ -61,15 +60,18 @@ export function onRematch({ data, socket, io, gameStates }: SocketHandlerParams)
       }
       
       const shouldSwapFirst = Math.random() < 0.5;
+      const newFirstPlayer = shouldSwapFirst ? room.players.find(p => p !== room.firstPlayer) : room.firstPlayer;
+      room.firstPlayer = newFirstPlayer;
+      room.currentPlayer = newFirstPlayer;
       
       // Emit game start events
-      console.log("Backend onRematch - emitting game start events:", { gameType, shouldSwapFirst });
+      console.log("Backend onRematch - emitting game start events:", { gameType, newFirstPlayer });
       if (gameType === "tictactoe") {
-        io.to(roomId).emit("updateBoard", Array(9).fill(null));
+        io.to(roomId).emit("updateBoard", { board: Array(9).fill(null), currentPlayer: room.currentPlayer });
       } else if (gameType === "connect-four") {
-        io.to(roomId).emit("updateBoard", Array(42).fill('valid'));
+        io.to(roomId).emit("updateBoard", { board: Array(42).fill('valid'), currentPlayer: room.currentPlayer });
       }
-      io.to(roomId).emit("gameStart", shouldSwapFirst);
+      io.to(roomId).emit("gameStart", { firstPlayer: room.firstPlayer });
       
       console.log("Backend onRematch - rematch completed, new state:", room.rematchState);
     } else {

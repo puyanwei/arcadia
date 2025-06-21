@@ -7,21 +7,16 @@ import React, {
   useRef,
   useState,
   ReactNode,
+  useCallback,
 } from "react";
 import type { Socket } from "socket.io-client";
-import { GameRoomEventHandlerMap, GameRoomEventName } from "./useGameRoom";
 
 // Context type
 export type SocketContextType = {
   socket: Socket | null;
-  on: <K extends GameRoomEventName>(
-    event: K,
-    handler: GameRoomEventHandlerMap[K]
-  ) => void;
-  off: <K extends GameRoomEventName>(
-    event: K,
-    handler: GameRoomEventHandlerMap[K]
-  ) => void;
+  clientId: string | null;
+  on: (event: string, handler: (...args: any[]) => void) => void;
+  off: (event: string, handler: (...args: any[]) => void) => void;
   isConnected: boolean;
   connectionError: string | null;
 };
@@ -30,23 +25,25 @@ const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
+  const [clientId, setClientId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const connectionAttemptRef = useRef<boolean>(false);
+  const connectionAttemptedRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (connectionAttemptRef.current) return;
-    connectionAttemptRef.current = true;
+    if (connectionAttemptedRef.current) return;
+    connectionAttemptedRef.current = true;
 
     // Get or create a client ID that persists for the session
     const getClientId = () => {
-      let clientId = sessionStorage.getItem("arcadia_client_id");
-      if (!clientId) {
+      let id = sessionStorage.getItem("arcadia_client_id");
+      if (!id) {
         // A simple unique ID generator for the session
-        clientId = `client_${Math.random().toString(36).substr(2, 9)}`;
-        sessionStorage.setItem("arcadia_client_id", clientId);
+        id = `client_${Math.random().toString(36).substr(2, 9)}`;
+        sessionStorage.setItem("arcadia_client_id", id);
       }
-      return clientId;
+      setClientId(id); // Set the clientId in state
+      return id;
     };
 
     // Dynamically import socket.io-client only on the client
@@ -81,32 +78,27 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
-        connectionAttemptRef.current = false;
+        connectionAttemptedRef.current = false;
       }
     };
   }, []);
 
-  function on<K extends GameRoomEventName>(
-    event: K,
-    handler: GameRoomEventHandlerMap[K]
-  ) {
-    socketRef.current?.on(event as string, handler as (...args: any[]) => void);
-  }
+  const on = useCallback((event: string, handler: (...args: any[]) => void) => {
+    socketRef.current?.on(event, handler);
+  }, []);
 
-  function off<K extends GameRoomEventName>(
-    event: K,
-    handler: GameRoomEventHandlerMap[K]
-  ) {
-    socketRef.current?.off(
-      event as string,
-      handler as (...args: any[]) => void
-    );
-  }
+  const off = useCallback(
+    (event: string, handler: (...args: any[]) => void) => {
+      socketRef.current?.off(event, handler);
+    },
+    []
+  );
 
   return (
     <SocketContext.Provider
       value={{
         socket: socketRef.current,
+        clientId,
         on,
         off,
         isConnected,

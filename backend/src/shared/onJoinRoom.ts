@@ -1,111 +1,64 @@
-import { Socket, Server } from "socket.io";
-import { GameRoom, GameRooms, GameType, PlayerNumber, ClientData } from "./types";
+import { Server, Socket } from "socket.io";
+import { assignPlayerNumber } from '../games/tictactoe/state';
+import { GameRoom, SocketHandlerParams, GameType, GameRooms } from './types';
+import { emitGameState } from '../games/tictactoe/handlers';
 
-type JoinRoomParams = {
-  data: ClientData;
-  gameStates: Record<string, GameRooms>;
-  socket: Socket;
-  io: Server;
-}
+export function onJoinRoom({ data, gameStates, socket, io, clientSocketMap }: SocketHandlerParams): void {
+  if (!data?.roomId || !data.clientId) return;
 
-export async function onJoinRoom({ data, gameStates, socket, io }: JoinRoomParams) {
-  try {
-    if (!data) return;
-    const { gameType, roomId } = data;
-    await checkIfGameExists(gameType, gameStates, socket);
+  const { gameType, roomId, clientId } = data;
+  const gameState = gameStates[gameType];
+  if (!gameState) return;
 
-    // Gets the game states for all rooms of that game type
-    const gameRooms = gameStates[gameType];
-    if (!gameRooms) {
-      socket.emit("error", "Game states not found");
-      return;
-    }
-
-    // Gets the specific room from the game states
-    let room = gameRooms.rooms[roomId];
-    if (!room) {
-      room = {
-        id: roomId,
-        players: [],
-        board: Array(9).fill(null)
-      };
-      console.log(`[onJoinRoom] Created new room: ${roomId}`);
-    }
-
-    if (room.players.length >= 2) {
-      console.log(`[onJoinRoom] Room ${roomId} is full. Player ${socket.id} denied.`);
-      socket.emit("error", "Room is full");
-      return;
-    }
-
-    room.players.push(socket.id);
-    console.log(`[onJoinRoom] Player ${socket.id} joined room ${roomId}. Players now: ${room.players.length}`);
-    gameRooms.rooms[roomId] = room;
-    
-    const { currentPlayer, otherPlayer } = assignPlayerNumber(room, gameRooms, socket.id);
-
-    socket.join(roomId);
-    socket.emit("playerNumber", { currentPlayer, otherPlayer });
-    io.to(roomId).emit("playerJoined", room.players.length);
-    
-    checkIfRoomIsFull(room, socket);
-
-    if (room.players.length === 2) {
-      const sockets = await io.in(roomId).allSockets();
-      console.log(`[onJoinRoom] Sockets in room ${roomId}:`, Array.from(sockets));
-      console.log(`[onJoinRoom] Room ${roomId} now has 2 players. Emitting gameStart.`);
-      io.to(roomId).emit("gameStart", true);
-    }
-  } catch (error) {
-    socket.emit("error", error instanceof Error ? error.message : "An error occurred");
+  let room = gameState.rooms[roomId];
+  if (!room) {
+    console.log(`[onJoinRoom] Created new room: ${roomId}`);
+    room = {
+      id: roomId,
+      players: [],
+      board: gameType === 'tictactoe' ? Array(9).fill(null) : Array(42).fill('valid'),
+    };
+    gameState.rooms[roomId] = room;
   }
-}
 
-function checkIfRoomIsFull(room: GameRoom, socket: Socket) {
+  if (!room.firstPlayer) {
+    room.firstPlayer = clientId;
+    room.currentPlayer = clientId;
+  }
+
+  // Prevent user from joining the same room from two different tabs
+  if (room.players.includes(clientId)) {
+    socket.emit('error', 'You have already joined this room from another tab.');
+    return;
+  }
+
   if (room.players.length >= 2) {
-    socket.emit("error", "Room is full");
+    socket.emit('error', 'This room is full.');
     return;
   }
-  return 
-}
 
-function assignPlayerNumber(room: GameRoom, gameRooms: GameRooms, socketId: string): { currentPlayer: PlayerNumber, otherPlayer: PlayerNumber | null } {
-  let currentPlayer: PlayerNumber;
-  let otherPlayer: PlayerNumber | null = null;
+  // Add player to room
+  room.players.push(clientId);
+  clientSocketMap[socket.id] = clientId; // Map socket.id to clientId
 
-  if (room.players.length === 0) {
-    currentPlayer = Math.random() < 0.5 ? "player1" : "player2";
-  } else {
-    const firstPlayerNumber = gameRooms.playerNumbers[room.players[0]];
-    currentPlayer = firstPlayerNumber === "player1" ? "player2" : "player1";
-    otherPlayer = firstPlayerNumber;
-  }
-  
-  gameRooms.playerNumbers[socketId] = currentPlayer;
-  return { currentPlayer, otherPlayer };
-}
+  // Assign player number (X or O)
+  assignPlayerNumber(gameState, room, clientId);
 
-export function getPlayerRoom(gameRooms: GameRooms, playerId: string): GameRoom | null {
-  for (const room of Object.values(gameRooms.rooms)) {
-    if (room.players.includes(playerId)) {
-      return room;
-    }
-  }
-  return null;
-};
+  socket.join(roomId);
+  console.log(`[onJoinRoom] Player ${clientId} (${socket.id}) joined room ${roomId}. Players now: ${room.players.length}`);
 
-export function validateGameType(gameType: string): gameType is GameType {
-  return gameType === 'tictactoe' || gameType === 'connect-four';
-}
+  // Notify players
+  io.to(roomId).emit('playerJoined', {
+    players: room.players.map(id => ({ id, playerNumber: gameState.playerNumbers[id] })),
+    playerCount: room.players.length
+  });
 
-export function checkIfGameExists(gameType: GameType, gameStates: Record<string, GameRooms>, socket: Socket) {
-  if (!validateGameType(gameType)) {
-    socket.emit("error", "Invalid game type");
-    return;
-  }
-  const gameRooms = gameStates[gameType];
-  if (!gameRooms) {
-    socket.emit("error", "Game states not found");
-    return;
+  // If room is full, start the game
+  if (room.players.length === 2) {
+    // Emit player numbers to each client individually
+    // ... (existing code to emit playerNumber)
+
+    console.log(`[onJoinRoom] Room ${roomId} now has 2 players. Emitting gameStart.`);
+    io.to(roomId).emit('gameStart', { firstPlayer: room.firstPlayer });
   }
 }

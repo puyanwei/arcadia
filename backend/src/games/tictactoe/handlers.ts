@@ -5,48 +5,86 @@ import { Board, RematchState, PlayerNumber, GameRooms } from '../../shared/types
 type HandleMoveParams = {
   gameRooms: GameRooms;
   roomId: string;
-  playerNumber: PlayerNumber;
-  move: { board: Board };
+  move: { index: number };
   socket: Socket;
   io: Server;
+  clientSocketMap: Record<string, string>;
 }
 
-export function handleMove({ gameRooms, roomId, move, socket, io }: HandleMoveParams): { newGameRooms: GameRooms } {
+export function handleMove({ gameRooms, roomId, move, socket, io, clientSocketMap }: HandleMoveParams): { newGameRooms: GameRooms } {
   const room = gameRooms.rooms[roomId];
-  if (!room) throw new Error('Room not found');
-  
-  // Validate board
-  if (!Array.isArray(move.board) || move.board.length !== 9) {
-    throw new Error('Invalid board state');
+  if (!room) {
+    socket.emit('error', 'Room not found.');
+    return { newGameRooms: gameRooms };
   }
   
-  if (!move.board.every(cell => cell === null || cell === 'player1' || cell === 'player2')) {
-    throw new Error('Invalid board values');
+  const clientId = clientSocketMap[socket.id];
+  if (!clientId) {
+    socket.emit('error', 'Could not identify client.');
+    return { newGameRooms: gameRooms };
+  }
+  
+  const playerNumber = gameRooms.playerNumbers[clientId];
+  if (!playerNumber) {
+    socket.emit('error', 'You are not a player in this game.');
+    return { newGameRooms: gameRooms };
   }
 
-  room.board = move.board;
-  socket.to(roomId).emit("updateBoard", move.board);
+  // Basic validation
+  const { index } = move;
+  if (typeof index !== 'number' || index < 0 || index > 8) {
+    socket.emit('error', 'Invalid move index.');
+    return { newGameRooms: gameRooms };
+  }
+
+  const board = room.board as Board;
+
+  // Check if it's the player's turn
+  if (room.currentPlayer !== clientId) {
+    socket.emit('error', "It's not your turn.");
+    return { newGameRooms: gameRooms };
+  }
+
+  // Check if the cell is already taken
+  if (board[index]) {
+    socket.emit('error', 'This cell is already taken.');
+    return { newGameRooms: gameRooms };
+  }
+
+  // Update the board state on the server
+  board[index] = playerNumber;
+
+  // Switch current player
+  const otherPlayer = room.players.find(p => p !== clientId);
+  if (otherPlayer) {
+    room.currentPlayer = otherPlayer;
+  }
+
+  // Broadcast the updated board and current player to all players in the room
+  io.to(roomId).emit("updateBoard", { board: room.board, currentPlayer: room.currentPlayer });
   
-  const result = checkEndOfGame(move.board);
+  const result = checkEndOfGame(board);
   if (!result) return { newGameRooms: gameRooms };
 
+  console.log(`[TicTacToe] Game finished. Result: ${result}`);
+
   if (result === 'draw') {
-    console.log('[gameEnd emit] gameResult: draw, message: Game ended in a draw!');
-    io.to(roomId).emit("gameEnd", { 
-      gameResult: 'draw', 
+    io.to(roomId).emit("gameEnd", {
+      gameResult: 'draw',
       message: 'Game ended in a draw!'
     });
   } else {
-    room.players.forEach(playerId => {
-      const playerNumber = gameRooms.playerNumbers[playerId];
-      const isWinner = playerNumber === result;
-      const msg = isWinner ? "You won!" : "You lost!";
-      console.log(`[gameEnd emit] gameResult: ${result}, message: ${msg} (to playerId: ${playerId})`);
-      io.to(playerId).emit("gameEnd", {
-        gameResult: result,
-        message: msg
+    // Find winner's socket ID
+    const winnerId = Object.keys(gameRooms.playerNumbers).find(
+      (id) => room.players.includes(id) && gameRooms.playerNumbers[id] === result
+    );
+
+    if (winnerId) {
+      room.players.forEach(playerId => {
+        const message = playerId === winnerId ? "You won!" : "You lost!";
+        io.to(playerId).emit("gameEnd", { gameResult: winnerId, message });
       });
-    });
+    }
   }
 
   return { newGameRooms: gameRooms };

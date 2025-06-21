@@ -9,8 +9,15 @@ type UseConnectFourReturnType = GameState &
   GameActions & { isConnected: boolean; connectionError: string | null };
 
 export function useConnectFour(): UseConnectFourReturnType {
-  const { socket, on, off, isConnected, connectionError } = useSocket();
-  const { roomState, joinRoom, rematch } = useGameRoom("connect-four");
+  const { socket, on, off, isConnected, connectionError, clientId } =
+    useSocket();
+  const {
+    roomId,
+    gameStatus: roomGameStatus,
+    rematchStatus,
+    joinRoom,
+    rematch,
+  } = useGameRoom("connect-four");
   const columns = boardGrid["connect-four"].columns;
   const rows = boardGrid["connect-four"].rows;
   const [gameState, setGameState] = useState<GameState>({
@@ -22,7 +29,13 @@ export function useConnectFour(): UseConnectFourReturnType {
     gameFinished: false,
     gameStatus: "Enter a room ID to start",
     rematchStatus: null,
+    roomId: "",
   });
+
+  // Update roomId in gameState when it changes
+  useEffect(() => {
+    setGameState((prev) => ({ ...prev, roomId }));
+  }, [roomId]);
 
   function isLowestEmptyCellInColumn(
     board: ConnectFourCell[],
@@ -116,7 +129,13 @@ export function useConnectFour(): UseConnectFourReturnType {
   }
 
   useEffect(() => {
-    const handleUpdateBoard = (newBoard: ConnectFourCell[]) => {
+    const handleUpdateBoard = ({
+      board: newBoard,
+      currentPlayer,
+    }: {
+      board: ConnectFourCell[];
+      currentPlayer?: string;
+    }) => {
       const cellStates = computeCellStates(newBoard);
       setGameState((prev) => {
         // If the board is completely reset (all cells are 'valid'), this is likely a rematch
@@ -144,11 +163,13 @@ export function useConnectFour(): UseConnectFourReturnType {
           };
         }
 
+        const myTurn = currentPlayer === clientId;
+
         return {
           ...prev,
           board: cellStates,
-          isMyTurn: true,
-          gameStatus: "Your turn!",
+          isMyTurn: myTurn,
+          gameStatus: myTurn ? "Your turn!" : "Waiting for opponent's move...",
         };
       });
     };
@@ -171,6 +192,9 @@ export function useConnectFour(): UseConnectFourReturnType {
     };
 
     function handleGameEnd({ gameResult, message }: GameEndEventData) {
+      console.log(
+        `[Connect Four] handleGameEnd called. Result: ${gameResult}, Message: ${message}`
+      );
       setGameState((prev) => ({
         ...prev,
         gameStarted: false,
@@ -181,17 +205,31 @@ export function useConnectFour(): UseConnectFourReturnType {
       }));
     }
 
-    function handleGameStart() {
-      setGameState((prev) => ({
-        ...prev,
-        gameStarted: true,
-        gameFinished: false,
-        isMyTurn: prev.playerNumber === "player1",
-        gameStatus:
-          prev.playerNumber === "player1"
-            ? "Your turn!"
-            : "Waiting for opponent's move...",
-      }));
+    function handleGameStart({ firstPlayer }: { firstPlayer: string }) {
+      setGameState((prev) => {
+        const myTurn = firstPlayer === clientId;
+        return {
+          ...prev,
+          gameStarted: true,
+          gameFinished: false,
+          isMyTurn: myTurn,
+          gameStatus: myTurn ? "Your turn!" : "Waiting for opponent's move...",
+        };
+      });
+    }
+
+    function handlePlayerJoined(count: number) {
+      setGameState((prev) => {
+        if (prev.gameStarted) {
+          return { ...prev, playersInRoom: count };
+        }
+        return {
+          ...prev,
+          playersInRoom: count,
+          gameStatus:
+            count === 2 ? "Game starting..." : "Waiting for opponent...",
+        };
+      });
     }
 
     function handleRematchState({
@@ -218,6 +256,7 @@ export function useConnectFour(): UseConnectFourReturnType {
 
     on("updateBoard", handleUpdateBoard);
     on("playerNumber", handlePlayerNumber);
+    on("playerJoined", handlePlayerJoined);
     on("gameEnd", handleGameEnd);
     on("gameStart", handleGameStart);
     on("rematchState", handleRematchState);
@@ -225,6 +264,7 @@ export function useConnectFour(): UseConnectFourReturnType {
     return () => {
       off("updateBoard", handleUpdateBoard);
       off("playerNumber", handlePlayerNumber);
+      off("playerJoined", handlePlayerJoined);
       off("gameEnd", handleGameEnd);
       off("gameStart", handleGameStart);
       off("rematchState", handleRematchState);
@@ -252,26 +292,29 @@ export function useConnectFour(): UseConnectFourReturnType {
       newBoard[index] = gameState.playerNumber;
 
       const updatedCellStates = computeCellStates(newBoard);
-      const winner = checkWinner(updatedCellStates);
 
       setGameState((prev) => ({
         ...prev,
         board: updatedCellStates,
         isMyTurn: false,
-        gameStatus: winner ? "Game Over!" : "Waiting for opponent's move...",
+        gameStatus: "Waiting for opponent's move...",
       }));
 
-      socket?.emit("makeMove", {
+      socket?.emit("move", {
         gameType: "connect-four",
         roomId,
+        clientId,
         board: newBoard,
+        playerNumber: gameState.playerNumber,
       });
     }
   }
 
   return {
     ...gameState,
-    ...roomState,
+    roomId,
+    gameStatus: gameState.gameStatus,
+    rematchStatus,
     makeMove,
     joinRoom,
     rematch,

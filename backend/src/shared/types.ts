@@ -20,8 +20,10 @@ export type RematchState = {
 
 export type GameRoom = {
   id: string;
-  players: string[];
-  board: Board | ConnectFourBoard | TicTacToeBoard;
+  players: string[]; // This will store clientIds
+  board: Board | ConnectFourBoard;
+  firstPlayer?: string;
+  currentPlayer?: string;
   rematchState?: RematchState;
 };
 
@@ -30,26 +32,31 @@ export type GameRooms = {
   playerNumbers: Record<string, PlayerNumber>;
 };
 
-export type GameResult = {
-  type: 'win' | 'draw';
-  winner?: PlayerNumber;
-  message: string;
-}
+export type GameResult<T extends string = string> = (T & {}) | "draw";
 export type Cell = (string | null)
 
-export type ClientData = { gameType: GameType, roomId: string, playerNumber: PlayerNumber, board?: any };
+export type ClientData = { 
+  gameType: GameType, 
+  roomId: string, 
+  clientId: string,
+  move?: {
+    index: number
+  },
+  board?: ConnectFourBoard,
+  playerNumber?: PlayerNumber
+};
 
 export type SocketHandlerParams = {
+  data?: ClientData;
+  gameStates: Record<GameType, GameRooms>;
   socket: Socket;
   io: Server;
-  gameStates: Record<string, GameRooms>;
-  emitGameState?: Function;
-  data?: ClientData;
+  clientSocketMap: Record<string, string>;
 };
 
 // Connect Four
 export type ConnectFourCell = Prettify<PlayerNumber | 'invalid' | 'valid'>
-export type ConnectFourBoard = ConnectFourCell[];
+export type ConnectFourBoard = ('player1' | 'player2' | 'valid' | 'invalid')[];
 
 // Tic Tac Toe
 export type TicTacToeCell = Prettify<PlayerNumber | 'invalid' | 'valid'>

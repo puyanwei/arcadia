@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {  checkEndOfGame, createInitialState } from '../state';
+import {  checkEndOfGame } from '../state';
+import { createInitialState } from '../../../shared/state';
 
 describe('checkEnd', () => {
   it('should return null for an empty board', () => {

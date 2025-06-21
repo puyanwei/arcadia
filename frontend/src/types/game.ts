@@ -6,7 +6,12 @@ export type PlayerNumber = 'player1' | 'player2' | null;
 export type Cell = (string | null)
 export type Board = Cell[]
 
-export type RematchStatus = "waiting" | "pending" | null;
+export type Player = {
+  id: string;
+  playerNumber: PlayerNumber;
+};
+
+export type RematchStatus = 'waiting' | 'pending' | 'accepted' | 'rejected' | null;
 
 export type GameState = {
   board: Board;

@@ -1,7 +1,7 @@
-import { GameRoomState, RematchStatus } from '@/hooks/useGameRoom';
-import { Prettify } from '@/types/game';
+import { Prettify, RematchStatus } from '@/types/game';
 
 export type PlayerNumber = 'player1' | 'player2';
+export type GameResult<T extends string = string> = (T & {}) | "draw";
 
 export type Board = (PlayerNumber | null)[];
 
@@ -14,6 +14,7 @@ export type GameState = {
   gameFinished: boolean;
   gameStatus: string;
   rematchStatus: RematchStatus;
+  roomId: string;
 };
 
 export type GameActions = {
@@ -22,11 +23,15 @@ export type GameActions = {
   rematch: (roomId: string) => void;
 };
 
+export type GameRoomState = {
+  roomId: string;
+  gameStatus: string;
+  rematchStatus: RematchStatus;
+};
+
 export type UseTicTacToeReturnType = GameState & GameActions & GameRoomState & { 
   isConnected: boolean;
   connectionError: string | null;
-  roomId: string;
 };
-export type GameEndStatus = Prettify<'draw' | PlayerNumber>;
-export type GameEndEventData = { gameResult: GameEndStatus; message: string }; 
+export type GameEndEventData = { gameResult: GameResult; message: string }; 
 export type RematchStatusEventData = { status: RematchStatus; message: string };
