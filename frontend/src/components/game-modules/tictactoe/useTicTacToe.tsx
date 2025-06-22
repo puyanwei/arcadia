@@ -39,7 +39,17 @@ export function useTicTacToe(): UseTicTacToeReturnType {
       const { status, gameResult, message } = data;
       setGameState((prev) => {
         let newGameStatus = prev.gameStatus;
+        let newBoard = prev.board;
+
         if (status === "playing") {
+          // Clear board on new game/rematch
+          if (
+            prev.gameStatus.includes("won") ||
+            prev.gameStatus.includes("lost") ||
+            prev.gameStatus.includes("draw")
+          ) {
+            newBoard = Array(9).fill(null);
+          }
           newGameStatus = prev.isMyTurn ? "Your turn!" : "Opponent's turn!";
         } else if (status === "waiting") {
           newGameStatus = "Waiting for opponent...";
@@ -53,7 +63,7 @@ export function useTicTacToe(): UseTicTacToeReturnType {
         } else if (status === "rematchWaiting") {
           newGameStatus = message || "Waiting for opponent to accept...";
         }
-        return { ...prev, gameStatus: newGameStatus };
+        return { ...prev, gameStatus: newGameStatus, board: newBoard };
       });
     };
 
