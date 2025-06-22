@@ -74,11 +74,11 @@ export function handleMove({
   if (result === 'draw') {
     gameResult = 'draw';
   } else if (result) {
-    // Find the clientId of the winner
-    gameResult =
-      Object.keys(gameRooms.playerNumbers).find(
-        id => gameRooms.playerNumbers[id] === result
-      ) || null;
+    // Find the clientId of the winner from the current room
+    const winnerId = room.players.find(
+      (id) => gameRooms.playerNumbers[id] === result
+    );
+    gameResult = winnerId || null;
   }
 
   console.log('Game Over. Result:', gameResult);

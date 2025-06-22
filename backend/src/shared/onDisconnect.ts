@@ -1,4 +1,4 @@
-import { SocketHandlerParams } from "./types";
+import { SocketHandlerParams, GameRoom, GameType } from "./types";
 
 export function onDisconnect({ socket, gameStates, clientSocketMap, io }: SocketHandlerParams) {
     const clientId = clientSocketMap[socket.id];
@@ -7,15 +7,15 @@ export function onDisconnect({ socket, gameStates, clientSocketMap, io }: Socket
     console.log(`[onDisconnect] Client ${clientId} (${socket.id}) disconnected.`);
 
     // Find which room the player was in
-    let playerRoom: any = null;
-    let gameType: any = null;
+    let playerRoom: GameRoom | null = null;
+    let gameType: GameType | null = null;
 
     for (const type in gameStates) {
         const game = gameStates[type as keyof typeof gameStates];
         for (const room of Object.values(game.rooms)) {
             if (room.players.includes(clientId)) {
                 playerRoom = room;
-                gameType = type;
+                gameType = type as GameType;
                 break;
             }
         }
